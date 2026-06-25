@@ -2,7 +2,6 @@ import telebot
 import requests
 import time
 import threading
-import logging
 from flask import Flask
 
 # --- Render-এর জন্য Web Server (Keep-alive) ---
@@ -15,8 +14,8 @@ def home():
 def run_web_server():
     app.run(host='0.0.0.0', port=8080)
 
-# --- কনফিগারেশন ---
-BOT_TOKEN = '8953289994:AAHViBBfRjy-k9rw-nKo7PIA8-eZFh4ypvs'
+# --- কনফিগারেশন (আপনার নতুন টোকেন ও এপিআই কী) ---
+BOT_TOKEN = '8942060883:AAFkMA0cLr0-d38PlR2_kJ1oZagTGPs6PQ0'
 API_KEY = 'MSVB8RMSMQK'
 BASE_URL = 'https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api'
 
@@ -26,12 +25,11 @@ HEADERS = {
     'Content-Type': 'application/json'
 }
 
-# --- কমান্ড হ্যান্ডলার ---
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     welcome_text = (
-        "🤖 **VoltxSMS OTP Bot (Render 24/7)**\n\n"
-        "নাম্বার নিতে নিচের কমান্ডটি দিন:\n"
+        "🤖 **VoltxSMS Bot Active!**\n\n"
+        "নাম্বার কিনতে নিচের কমান্ডটি দিন:\n"
         "`/get rid_নাম্বার` (যেমন: `/get 26134`)\n\n"
         "💡 ব্যালেন্স বা RID চেক করতে সাইটের ড্যাশবোর্ড দেখুন।"
     )
@@ -65,7 +63,7 @@ def buy_number(message):
             # OTP চেক করার জন্য আলাদা থ্রেড শুরু
             threading.Thread(target=poll_otp, args=(message.chat.id, number)).start()
         else:
-            bot.edit_message_text(f"❌ এরর: {res_data['message']}", message.chat.id, status_msg.message_id)
+            bot.edit_message_text(f"❌ এরর: {res_data.get('message', 'ব্যালেন্স নেই')}", message.chat.id, status_msg.message_id)
     except Exception as e:
         bot.edit_message_text(f"⚠️ সার্ভার সমস্যা। আবার চেষ্টা করুন।", message.chat.id, status_msg.message_id)
 
@@ -85,12 +83,13 @@ def poll_otp(chat_id, target_number):
         time.sleep(10)
     bot.send_message(chat_id, f"⏰ সময় শেষ! `{target_number}`-এ কোনো OTP আসেনি।")
 
-# --- বট স্টার্ট করার লুপ ---
+# --- ২৪ ঘণ্টা চালানোর লুপ ---
 def start_bot():
     while True:
         try:
             print("Bot is polling...")
-            bot.polling(none_stop=True, interval=0, timeout=30)
+            bot.remove_webhook() # Conflict মেটানোর জন্য
+            bot.polling(none_stop=True, interval=0, timeout=40)
         except Exception as e:
             print(f"Polling error: {e}")
             time.sleep(10)
