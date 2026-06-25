@@ -2,7 +2,6 @@ import telebot
 import requests
 import time
 import threading
-import re
 from flask import Flask
 from telebot import types
 from waitress import serve
@@ -11,22 +10,32 @@ from waitress import serve
 BOT_TOKEN = '8942060883:AAH6VqwhkD4_FILqIQzrvluwhboPJY_R9qg'
 API_KEY = 'MSVB8RMSMQK'
 BASE_URL = 'https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api'
-
-# ওটিপি গ্রুপ ও লিঙ্ক
 GROUP_ID = -1003968881110 
 GROUP_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 
 bot = telebot.TeleBot(BOT_TOKEN)
 HEADERS = {'mauthapi': API_KEY, 'Content-Type': 'application/json'}
 
-# --- কান্ট্রি ফ্ল্যাগ হেল্পার ---
-def get_flag(country_name):
-    flags = {
-        "Benin": "🇧🇯", "Ivory Coast": "🇨🇮", "Guinea": "🇬🇳", 
-        "Central African Rep.": "🇨🇫", "United Kingdom": "🇬🇧", 
-        "Bangladesh": "🇧🇩", "USA": "🇺🇸", "India": "🇮🇳", "Vietnam": "🇻🇳", "Nigeria": "🇳🇬"
-    }
-    return flags.get(country_name, "🌍")
+# --- কান্ট্রি ম্যাপ (Prefix অনুযায়ী দেশ ও ফ্ল্যাগ) ---
+COUNTRY_MAP = {
+    "225": {"name": "Ivory Coast", "flag": "🇨🇮"},
+    "229": {"name": "Benin", "flag": "🇧🇯"},
+    "224": {"name": "Guinea", "flag": "🇬🇳"},
+    "234": {"name": "Nigeria", "flag": "🇳🇬"},
+    "44": {"name": "United Kingdom", "flag": "🇬🇧"},
+    "1": {"name": "USA/Canada", "flag": "🇺🇸"},
+    "880": {"name": "Bangladesh", "flag": "🇧🇩"},
+    "91": {"name": "India", "flag": "🇮🇳"},
+    "84": {"name": "Vietnam", "flag": "🇻🇳"},
+    "233": {"name": "Ghana", "flag": "🇬🇭"},
+    "236": {"name": "Central Africa", "flag": "🇨🇫"}
+}
+
+def get_country_info(range_val):
+    for prefix, info in COUNTRY_MAP.items():
+        if range_val.startswith(prefix):
+            return info
+    return {"name": "Unknown", "flag": "🌍"}
 
 # --- ওয়েব সার্ভার ---
 app = Flask('')
@@ -46,7 +55,7 @@ def main_menu():
 # --- ওটিপি চেক ফাংশন ---
 def poll_otp(chat_id, num, user_name, service_name):
     start_time = time.time()
-    while time.time() - start_time < 600: # ১০ মিনিট চেক করবে
+    while time.time() - start_time < 600:
         try:
             r = requests.get(f"{BASE_URL}/success-otp", headers=HEADERS, timeout=10).json()
             if r['meta']['code'] == 200:
@@ -75,95 +84,63 @@ def poll_otp(chat_id, num, user_name, service_name):
         except: pass
         time.sleep(10)
 
-# --- কমান্ড হ্যান্ডলার ---
+# --- স্টার্ট কমান্ড ---
 @bot.message_handler(commands=['start'])
 def start(message):
-    welcome = (
-        f"🤖 **Welcome to Borhan OTP!**\n\n"
-        f"হ্যালো {message.from_user.first_name}, বোরহান ওটিপি সার্ভিস থেকে সব ধরণের ভার্চুয়াল নাম্বার নিন।\n\n"
-        f"💡 **টিপস:** সরাসরি কোনো রেঞ্জ (যেমন: `22501XXX`) মেসেজ পাঠিয়ে ওই রেঞ্জ থেকে নাম্বার নিতে পারেন।"
-    )
+    welcome = f"🤖 **Welcome {message.from_user.first_name}!**\n\nনিচের বাটন থেকে আপনার প্রয়োজনীয় দেশ সিলেক্ট করে নাম্বার নিন।"
     bot.send_message(message.chat.id, welcome, reply_markup=main_menu(), parse_mode="Markdown")
 
-# --- ম্যানুয়াল রেঞ্জ মেসেজ হ্যান্ডলার ---
-@bot.message_handler(regexp=r'^\d+XXX$')
-def manual_range_input(message):
-    full_range = message.text
-    rid = full_range.replace("XXX", "")
-    user_name = message.from_user.first_name
-    chat_id = message.chat.id
-    
-    msg = bot.send_message(chat_id, f"⏳ রেঞ্জ `{full_range}` থেকে নাম্বার খোঁজা হচ্ছে...", parse_mode="Markdown")
-    
-    try:
-        res = requests.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=HEADERS, timeout=20).json()
-        if res['meta']['code'] == 200:
-            num_data = res['data']
-            full_num = num_data['full_number']
-            clean_num = num_data['no_plus_number']
-            country = num_data['country']
-            flag = get_flag(country)
-            
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🔄 New Number", callback_data=f"buy_Manual_{rid}"))
-            
-            response_text = (
-                f"✅ **নাম্বার পাওয়া গেছে!**\n\n"
-                f"━━━━━━━━━━━━━━\n"
-                f"{flag} **Country:** {country}\n"
-                f"📱 **Number:** `{full_num}`\n"
-                f"📍 **Range:** `{full_range}`\n"
-                f"━━━━━━━━━━━━━━\n"
-                f"⏳ **ওটিপির জন্য অপেক্ষা করুন...**"
-            )
-            bot.edit_message_text(response_text, chat_id, msg.message_id, reply_markup=markup, parse_mode="Markdown")
-            threading.Thread(target=poll_otp, args=(chat_id, clean_num, user_name, "Manual Range")).start()
-        else:
-            bot.edit_message_text(f"❌ **ব্যর্থ:** {res.get('message', 'নাম্বার পাওয়া যায়নি।')}", chat_id, msg.message_id)
-    except:
-        bot.send_message(chat_id, "❌ কানেকশন এরর।")
-
-# --- ফুল ট্রাফিক সার্ভিস (All Services) ---
+# --- অটোমেটিক কান্ট্রি ও রেঞ্জ ভিত্তিক নাম্বার বাটন ---
 @bot.message_handler(func=lambda m: m.text == "📞 Get Number")
 def choose_service(m):
     try:
         res = requests.get(f"{BASE_URL}/liveaccess", headers=HEADERS).json()
         if res['meta']['code'] == 200:
-            services = res['data']['services'] # কোনো ফিল্টার নেই, সব সার্ভিস দেখাবে
+            services = res['data']['services']
             
-            markup = types.InlineKeyboardMarkup(row_width=2)
-            buttons = []
+            # ৫টি ভিন্ন দেশের রেঞ্জ বাছাই করা
+            unique_countries = []
+            seen_prefixes = set()
+            
             for s in services:
-                buttons.append(types.InlineKeyboardButton(f"📲 {s['sid']}", callback_data=f"ser_{s['sid']}"))
+                for r in s['ranges']:
+                    # প্রথম ৩ ডিজিট দিয়ে দেশ চেনা (Prefix)
+                    prefix = r[:3]
+                    if prefix not in seen_prefixes:
+                        info = get_country_info(r)
+                        unique_countries.append({
+                            "name": info['name'],
+                            "flag": info['flag'],
+                            "range": r,
+                            "sid": s['sid']
+                        })
+                        seen_prefixes.add(prefix)
+                    if len(unique_countries) >= 5: break
+                if len(unique_countries) >= 5: break
+
+            if not unique_countries:
+                bot.send_message(m.chat.id, "❌ বর্তমানে কোনো স্টোক নেই।")
+                return
+
+            markup = types.InlineKeyboardMarkup(row_width=1)
+            for item in unique_countries:
+                btn_text = f"{item['flag']} {item['name']} ({item['range']})"
+                # callback_data: buy_ServiceName_RangeID
+                rid = item['range'].replace("XXX", "")
+                markup.add(types.InlineKeyboardButton(btn_text, callback_data=f"buy_{item['sid']}_{rid}"))
             
-            markup.add(*buttons)
-            bot.send_message(m.chat.id, "💎 **প্যানেলের সকল সার্ভিস (Full Traffic):**", reply_markup=markup, parse_mode="Markdown")
-        else:
-            bot.send_message(m.chat.id, "❌ সার্ভিস লিস্ট পাওয়া যায়নি।")
-    except:
-        bot.send_message(m.chat.id, "❌ ডাটা লোড করতে সমস্যা হচ্ছে।")
+            bot.send_message(m.chat.id, "🌍 **বেস্ট ট্রাফিক কান্ট্রি লিস্ট:**\nএকটি দেশ সিলেক্ট করুন:", reply_markup=markup, parse_mode="Markdown")
+    except Exception as e:
+        bot.send_message(m.chat.id, "❌ ডাটা লোড করতে সমস্যা হয়েছে।")
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("ser_"))
-def show_ranges(call):
-    sid = call.data.split("_")[1]
-    res = requests.get(f"{BASE_URL}/liveaccess", headers=HEADERS).json()
-    services = res['data']['services']
-    selected = next((item for item in services if item['sid'] == sid), None)
-    
-    if selected:
-        markup = types.InlineKeyboardMarkup(row_width=1)
-        for r in selected['ranges']:
-            rid = r.replace("XXX", "")
-            markup.add(types.InlineKeyboardButton(f"🌍 Range: {r}", callback_data=f"buy_{sid}_{rid}"))
-        bot.edit_message_text(f"📍 **Service: {sid}**\nএকটি রেঞ্জ সিলেক্ট করুন:", call.message.chat.id, call.message.message_id, reply_markup=markup)
-
+# --- নাম্বার কেনার প্রসেস ---
 @bot.callback_query_handler(func=lambda call: call.data.startswith("buy_"))
 def buy_callback(call):
-    parts = call.data.split("_")
-    sid = parts[1]
-    rid = parts[2]
+    _, sid, rid = call.data.split("_")
     user_name = call.from_user.first_name
-    bot.edit_message_text(f"⏳ **{sid} এর নাম্বার তোলা হচ্ছে...**", call.message.chat.id, call.message.message_id)
+    chat_id = call.message.chat.id
+    
+    bot.edit_message_text(f"⏳ **নাম্বার তোলা হচ্ছে...**", chat_id, call.message.message_id)
     
     try:
         res = requests.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=HEADERS).json()
@@ -172,29 +149,26 @@ def buy_callback(call):
             full_num = num_data['full_number']
             clean_num = num_data['no_plus_number']
             country = num_data['country']
-            flag = get_flag(country)
-            
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"buy_{sid}_{rid}"))
             
             response_text = (
-                f"✅ **নাম্বার পাওয়া গেছে!**\n\n"
+                f"✅ **নাম্বার রেডি!**\n\n"
                 f"━━━━━━━━━━━━━━\n"
-                f"{flag} **Country:** {country}\n"
+                f"🌍 **Country:** {country}\n"
                 f"📱 **Number:** `{full_num}`\n"
-                f"🧩 **Service:** {sid}\n"
                 f"━━━━━━━━━━━━━━\n"
-                f"⏳ **ওটিপির জন্য অপেক্ষা করুন...**"
+                f"⏳ ওটিপির জন্য অপেক্ষা করুন..."
             )
-            bot.edit_message_text(response_text, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
-            threading.Thread(target=poll_otp, args=(call.message.chat.id, clean_num, user_name, sid)).start()
+            bot.edit_message_text(response_text, chat_id, call.message.message_id, parse_mode="Markdown")
+            threading.Thread(target=poll_otp, args=(chat_id, clean_num, user_name, sid)).start()
         else:
-            bot.edit_message_text(f"❌ **Stock Out:** {res['message']}", call.message.chat.id, call.message.message_id)
-    except: pass
+            bot.edit_message_text(f"❌ **ব্যর্থ:** {res['message']}", chat_id, call.message.message_id)
+    except:
+        bot.send_message(chat_id, "❌ এরর! আবার চেষ্টা করুন।")
 
+# --- অন্যান্য বাটন ---
 @bot.message_handler(func=lambda m: m.text == "💰 Balance")
 def check_balance(m):
-    bot.reply_to(m, "💳 **Account Balance:**\nব্যালেন্স রিফিলের জন্য অ্যাডমিনের সাথে যোগাযোগ করুন।")
+    bot.reply_to(m, "💳 আপনার অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স আছে।")
 
 @bot.message_handler(func=lambda m: m.text == "🖥️ Console")
 def show_console(m):
@@ -202,18 +176,18 @@ def show_console(m):
         res = requests.get(f"{BASE_URL}/console", headers=HEADERS).json()
         if res['meta']['code'] == 200:
             hits = res['data'].get('hits', [])
-            text = "🖥️ **Borhan OTP Live Hits:**\n\n"
+            text = "🖥️ **Live Traffic:**\n\n"
             for h in hits[:5]:
                 text += f"🔹 {h['sid']} | `{h['range']}` | ✅ Success\n"
             bot.send_message(m.chat.id, text, parse_mode="Markdown")
     except: pass
 
-# --- বট স্টার্ট লুপ ---
+# --- বট স্টার্ট ---
 if __name__ == "__main__":
     threading.Thread(target=run_web_server).start()
-    print("Borhan OTP Pro is starting...")
+    print("Borhan OTP Bot is Running...")
     while True:
         try:
-            bot.polling(none_stop=True, timeout=60)
+            bot.polling(none_stop=True)
         except:
             time.sleep(10)
