@@ -2,6 +2,7 @@ import telebot
 import requests
 import time
 import threading
+import re  # ওটিপি কোড খুঁজে বের করার জন্য রেজেক্স ইম্পোর্ট করা হয়েছে
 from flask import Flask
 from telebot import types
 from waitress import serve
@@ -54,7 +55,7 @@ def main_menu():
     )
     return markup
 
-# --- ওটিপি চেক ফাংশন ---
+# --- ওটিপি চেক ফাংশন (আপডেটেড) ---
 def poll_otp(chat_id, num, user_name, service_name):
     start_time = time.time()
     while time.time() - start_time < 600:
@@ -63,12 +64,23 @@ def poll_otp(chat_id, num, user_name, service_name):
             if r['meta']['code'] == 200:
                 for o in r['data'].get('otps', []):
                     if str(o['number']) == str(num):
+                        # মেসেজ থেকে ৫ বা ৬ ডিজিটের কোড খুঁজে বের করার লজিক
+                        raw_message = o['message']
+                        # \d{5,6} মানে হচ্ছে পরপর ৫ অথবা ৬ টি সংখ্যা খুঁজবে
+                        otp_match = re.search(r'\d{5,6}', raw_message)
+                        
+                        if otp_match:
+                            extracted_code = otp_match.group() # শুধু কোডটি নিবে
+                        else:
+                            extracted_code = raw_message # যদি কোড না পায় তবে পুরো মেসেজ দিবে
+
                         otp_msg = (
                             f"⚡️ **Borhan OTP Received!**\n"
                             f"━━━━━━━━━━━━━━\n"
                             f"📱 Number: `{num}`\n"
-                            f"🔑 Code: `{o['message']}`\n"
-                            f"━━━━━━━━━━━━━━"
+                            f"🔑 OTP Code: `{extracted_code}`\n"
+                            f"━━━━━━━━━━━━━━\n"
+                            f"💡 *কোডের ওপর ক্লিক করলে কপি হয়ে যাবে।*"
                         )
                         bot.send_message(chat_id, otp_msg, parse_mode="Markdown")
                         
@@ -76,7 +88,7 @@ def poll_otp(chat_id, num, user_name, service_name):
                             f"📢 **Borhan OTP Success**\n"
                             f"━━━━━━━━━━━━━━\n"
                             f"📱 Number: `{num[:6]}***{num[-2:]}`\n"
-                            f"🔑 Code: `{o['message']}`\n"
+                            f"🔑 Code: `{extracted_code}`\n"
                             f"🌐 Service: {service_name}\n"
                             f"👤 User: {user_name}\n"
                             f"━━━━━━━━━━━━━━"
@@ -100,18 +112,16 @@ def choose_main_service(m):
     markup.add(types.InlineKeyboardButton("🟢 WhatsApp", callback_data="select_whatsapp"))
     bot.send_message(m.chat.id, "📱 **কোন সার্ভিসের নাম্বার প্রয়োজন?**", reply_markup=markup)
 
-# --- স্টেপ ২: দেশ সিলেকশন (ফিল্টার করা ট্রাফিক) ---
+# --- স্টেপ ২: দেশ সিলেকশন ---
 @bot.callback_query_handler(func=lambda call: call.data.startswith("select_"))
 def select_country_for_service(call):
-    service_type = call.data.split("_")[1] # facebook or whatsapp
+    service_type = call.data.split("_")[1]
     bot.edit_message_text(f"⏳ {service_type.capitalize()} এর জন্য সেরা দেশগুলো খোঁজা হচ্ছে...", call.message.chat.id, call.message.message_id)
     
     try:
         res = requests.get(f"{BASE_URL}/liveaccess", headers=HEADERS).json()
         if res['meta']['code'] == 200:
             all_services = res['data']['services']
-            
-            # কিউওয়ার্ড দিয়ে সার্ভিস ফিল্টার (যেমন: facebook বা fb)
             target_keywords = ["fb", "facebook"] if service_type == "facebook" else ["wa", "whatsapp"]
             filtered_services = [s for s in all_services if any(k in s['sid'].lower() for k in target_keywords)]
             
