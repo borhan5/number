@@ -8,7 +8,7 @@ from telebot import types
 from waitress import serve
 
 # --- CONFIGURATION ---
-BOT_TOKEN = '8942060883:AAHYvPhZZspoVTsr_Uh2SpIkkV4plCW1L5s'
+BOT_TOKEN = '8953289994:AAHalks0v_QNWta40jorqobnfwS1trW8pJQ'
 API_KEY = 'MSVB8RMSMQK'
 BASE_URL = 'https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api'
 
