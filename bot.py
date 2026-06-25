@@ -11,25 +11,25 @@ BOT_TOKEN = '8942060883:AAEkcbE5sQuWs9xiAkxftDdONPkTYSuFcr8'
 API_KEY = 'MSVB8RMSMQK'
 BASE_URL = 'https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api'
 
-# ওটিপি ফরওয়ার্ড করার গ্রুপ আইডি এবং আপনার লিঙ্ক
-GROUP_ID = -1003968881110  # আপনার গ্রুপ আইডি (আইডির আগে -100 আছে কি না চেক করে নিন)
-GROUP_LINK = "https://t.me/your_group_link" # এখানে আপনার গ্রুপের বা চ্যানেলের লিঙ্ক দিন
+# ওটিপি ফরওয়ার্ড করার গ্রুপ আইডি এবং আপনার দেওয়া লিঙ্ক
+GROUP_ID = -1003968881110  # আপনার গ্রুপ আইডি
+GROUP_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl" # আপনার দেওয়া নতুন লিঙ্ক
 
 bot = telebot.TeleBot(BOT_TOKEN)
 HEADERS = {'mauthapi': API_KEY, 'Content-Type': 'application/json'}
 
-# --- Render Web Server (বটকে ২৪ ঘণ্টা জাগিয়ে রাখার জন্য) ---
+# --- Render Web Server (বটকে জাগিয়ে রাখার জন্য) ---
 app = Flask('')
 @app.route('/')
 def home(): return "Bot is Alive"
 def run_web_server(): serve(app, host='0.0.0.0', port=8080)
 
-# --- নাম্বার মাস্ক করার ফাংশন (মাঝখানের ৩টি সংখ্যা সরিয়ে *** দিবে) ---
+# --- নাম্বারের মাঝখান থেকে ৩টি সংখ্যা মুছে *** দেওয়ার ফাংশন ---
 def mask_number(num_str):
     num_str = str(num_str)
-    if len(num_str) > 7:
-        # শুরুর ৪টি এবং শেষের ৪টি সংখ্যা রেখে মাঝখানে *** বসাবে
-        return f"{num_str[:4]}***{num_str[-4:]}"
+    if len(num_str) > 8:
+        # শুরুর ৫টি এবং শেষের ৪টি রেখে মাঝখানে ৩টি সংখ্যা মুছে দিবে
+        return f"{num_str[:5]}***{num_str[-4:]}"
     return num_str
 
 # --- মেইন মেনু ---
@@ -51,7 +51,7 @@ def poll_otp(chat_id, num, user_name):
                 otps = r['data'].get('otps', [])
                 for o in otps:
                     if str(o['number']) == str(num):
-                        # ১. ইউজারকে পূর্ণ মেসেজ পাঠানো
+                        # ১. ইউজারকে পার্সোনাল মেসেজ (সম্পূর্ণ নাম্বার)
                         otp_msg = (
                             f"📩 **New OTP Received!**\n"
                             f"━━━━━━━━━━━━━━\n"
@@ -61,10 +61,10 @@ def poll_otp(chat_id, num, user_name):
                         )
                         bot.send_message(chat_id, otp_msg, parse_mode="Markdown")
                         
-                        # ২. গ্রুপে মাস্ক করা নাম্বার দিয়ে ফরওয়ার্ড করা
+                        # ২. মেইন গ্রুপে মাস্ক করা নাম্বার দিয়ে মেসেজ
                         masked_num = mask_number(num)
                         group_log = (
-                            f"📢 **OTP Forward Log**\n"
+                            f"📢 **New Successful Hit**\n"
                             f"━━━━━━━━━━━━━━\n"
                             f"📱 Number: `{masked_num}`\n"
                             f"🔑 Code: `{o['message']}`\n"
@@ -92,7 +92,7 @@ def show_services(m):
             markup = types.InlineKeyboardMarkup(row_width=2)
             for s in services:
                 markup.add(types.InlineKeyboardButton(f"📱 {s['sid']}", callback_data=f"ser_{s['sid']}"))
-            bot.send_message(m.chat.id, "🐸 **Choose a service:**", reply_markup=markup, parse_mode="Markdown")
+            bot.send_message(m.chat.id, "🐸 **সেবা নির্বাচন করুন:**", reply_markup=markup, parse_mode="Markdown")
     except: pass
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("ser_"))
@@ -114,18 +114,18 @@ def show_ranges(call):
 def buy_process(call):
     _, sid, rid = call.data.split("_")
     user_name = call.from_user.first_name
-    bot.edit_message_text(f"⏳ **Requesting {sid}...**", call.message.chat.id, call.message.message_id)
+    bot.edit_message_text(f"⏳ **নাম্বার খোঁজা হচ্ছে...**", call.message.chat.id, call.message.message_id)
     try:
         res = requests.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=HEADERS, timeout=15).json()
         if res['meta']['code'] == 200:
             num = res['data']['no_plus_number']
             full_num = res['data']['full_number']
             
-            # নাম্বারের নিচে গ্রুপের বাটন যোগ করা
+            # নাম্বারের নিচেই গ্রুপের লিঙ্ক বাটন আকারে দেওয়া হলো
             markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("📢 Join Our Group", url=GROUP_LINK))
+            markup.add(types.InlineKeyboardButton("📢 আমাদের গ্রুপে জয়েন করুন", url=GROUP_LINK))
             
-            bot.edit_message_text(f"✅ **Number Received!**\n📱 `{full_num}`\n⏳ Waiting for OTP...", 
+            bot.edit_message_text(f"✅ **Number Received!**\n📱 `{full_num}`\n⏳ ওটিপির জন্য অপেক্ষা করুন...", 
                                   call.message.chat.id, call.message.message_id, 
                                   reply_markup=markup, parse_mode="Markdown")
             
@@ -136,12 +136,7 @@ def buy_process(call):
 
 @bot.message_handler(func=lambda m: m.text == "💰 Balance")
 def check_balance(m):
-    # এখানে আপনার এপিআই থেকে ব্যালেন্স দেখানোর লজিক দিতে পারেন
-    bot.reply_to(m, "💰 Your account balance API integration is needed.")
-
-@bot.message_handler(func=lambda m: m.text == "📊 Stats")
-def show_stats(m):
-    bot.reply_to(m, "📊 System statistics will be shown here.")
+    bot.reply_to(m, "💰 Your API account balance needs check.")
 
 @bot.message_handler(func=lambda m: m.text == "🖥️ Console")
 def show_console(m):
@@ -149,18 +144,18 @@ def show_console(m):
         res = requests.get(f"{BASE_URL}/console", headers=HEADERS).json()
         if res['meta']['code'] == 200:
             hits = res['data'].get('hits', [])
-            console_text = "🖥️ **Live Console**\n"
+            console_text = "🖥️ **Live Hit Console**\n━━━━━━━━━━━━━━\n"
             for hit in hits[:5]:
                 console_text += f"🔹 {hit['sid']} | `{hit['range']}`\n"
             bot.send_message(m.chat.id, console_text, parse_mode="Markdown")
     except: pass
 
-# --- বট স্টার্ট ---
+# --- বট স্টার্ট লুপ ---
 if __name__ == "__main__":
     threading.Thread(target=run_web_server).start()
-    print("Bot is starting...")
+    print("Profit Player Bot is Starting...")
     while True:
         try:
             bot.polling(none_stop=True, interval=0, timeout=40)
-        except Exception as e:
+        except:
             time.sleep(10)
