@@ -2,6 +2,7 @@ import telebot
 import requests
 import time
 import threading
+import re
 from flask import Flask
 from telebot import types
 from waitress import serve
@@ -10,38 +11,47 @@ from waitress import serve
 BOT_TOKEN = '8942060883:AAEkcbE5sQuWs9xiAkxftDdONPkTYSuFcr8'
 API_KEY = 'MSVB8RMSMQK'
 BASE_URL = 'https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api'
-
-# ওটিপি ফরওয়ার্ড করার গ্রুপ আইডি এবং আপনার দেওয়া লিঙ্ক
-GROUP_ID = -1003968881110  # আপনার গ্রুপ আইডি
-GROUP_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl" # আপনার দেওয়া নতুন লিঙ্ক
+GROUP_ID = -1003968881110 
+GROUP_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
+WELCOME_IMAGE = "https://i.ibb.co/hC4nFfC/welcome-image.jpg" # আপনার ছবির ডাইরেক্ট লিঙ্ক এখানে দিন
 
 bot = telebot.TeleBot(BOT_TOKEN)
 HEADERS = {'mauthapi': API_KEY, 'Content-Type': 'application/json'}
 
-# --- Render Web Server (বটকে জাগিয়ে রাখার জন্য) ---
+# --- Render Web Server (বট সচল রাখতে) ---
 app = Flask('')
 @app.route('/')
 def home(): return "Bot is Alive"
 def run_web_server(): serve(app, host='0.0.0.0', port=8080)
 
-# --- নাম্বারের মাঝখান থেকে ৩টি সংখ্যা মুছে *** দেওয়ার ফাংশন ---
+# --- ৫ বা ৬ সংখ্যার ওটিপি ফিল্টার ---
+def extract_otp(msg):
+    match5 = re.search(r'\b\d{5}\b', str(msg))
+    if match5: return match5.group(0)
+    match6 = re.search(r'\b\d{6}\b', str(msg))
+    if match6: return match6.group(0)
+    return msg
+
+# --- নাম্বার মাস্কিং ---
 def mask_number(num_str):
     num_str = str(num_str)
-    if len(num_str) > 8:
-        # শুরুর ৫টি এবং শেষের ৪টি রেখে মাঝখানে ৩টি সংখ্যা মুছে দিবে
-        return f"{num_str[:5]}***{num_str[-4:]}"
+    if len(num_str) > 6:
+        return f"{num_str[:4]}****{num_str[-2:]}"
     return num_str
 
-# --- মেইন মেনু ---
+# --- মেইন মেনু (হুবহু স্ক্রিনশটের মতো) ---
 def main_menu():
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    markup.add(
-        types.KeyboardButton("📞 Get Number"), types.KeyboardButton("🖥️ Console"),
-        types.KeyboardButton("💰 Balance"), types.KeyboardButton("📊 Stats")
-    )
+    btn1 = types.KeyboardButton("📞 Get Number")
+    btn2 = types.KeyboardButton("📦 Stock Number")
+    btn3 = types.KeyboardButton("🔐 Get 2FA")
+    btn4 = types.KeyboardButton("🔎 Extract OTP")
+    btn5 = types.KeyboardButton("📊 Stats")
+    btn6 = types.KeyboardButton("💰 Balance")
+    markup.add(btn1, btn2, btn3, btn4, btn5, btn6)
     return markup
 
-# --- ওটিপি পোলিং ও ফরওয়ার্ডিং ফাংশন ---
+# --- ওটিপি পোলিং ও ফরওয়ার্ডিং ---
 def poll_otp(chat_id, num, user_name):
     start_time = time.time()
     while time.time() - start_time < 300: 
@@ -51,48 +61,45 @@ def poll_otp(chat_id, num, user_name):
                 otps = r['data'].get('otps', [])
                 for o in otps:
                     if str(o['number']) == str(num):
-                        # ১. ইউজারকে পার্সোনাল মেসেজ (সম্পূর্ণ নাম্বার)
-                        otp_msg = (
-                            f"📩 **New OTP Received!**\n"
-                            f"━━━━━━━━━━━━━━\n"
-                            f"📱 Number: `{num}`\n"
-                            f"🔑 Code: `{o['message']}`\n"
-                            f"━━━━━━━━━━━━━━"
-                        )
-                        bot.send_message(chat_id, otp_msg, parse_mode="Markdown")
+                        display_code = extract_otp(o['message'])
+                        # ইউজারকে ওটিপি পাঠানো
+                        bot.send_message(chat_id, f"📩 **New OTP Received!**\n━━━━━━━━━━━━━━\n📱 Number: `{num}`\n🔑 Code: `{display_code}`\n━━━━━━━━━━━━━━", parse_mode="Markdown")
                         
-                        # ২. মেইন গ্রুপে মাস্ক করা নাম্বার দিয়ে মেসেজ
+                        # গ্রুপে সাকসেস লগ পাঠানো
                         masked_num = mask_number(num)
-                        group_log = (
-                            f"📢 **New Successful Hit**\n"
-                            f"━━━━━━━━━━━━━━\n"
-                            f"📱 Number: `{masked_num}`\n"
-                            f"🔑 Code: `{o['message']}`\n"
-                            f"👤 User: {user_name}\n"
-                            f"━━━━━━━━━━━━━━"
-                        )
-                        try:
-                            bot.send_message(GROUP_ID, group_log, parse_mode="Markdown")
+                        group_log = (f"📢 **New Successful Hit**\n━━━━━━━━━━━━━━\n"
+                                     f"📱 Number: `{masked_num}`\n🔑 Code: `{display_code}`\n"
+                                     f"👤 User: {user_name}\n━━━━━━━━━━━━━━")
+                        try: bot.send_message(GROUP_ID, group_log, parse_mode="Markdown")
                         except: pass
                         return
         except: pass
         time.sleep(10)
 
-# --- কমান্ড হ্যান্ডলার ---
+# --- স্টার্ট কমান্ড (ছবিসহ ওয়েলকাম মেসেজ) ---
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(message.chat.id, "🤖 **The Profit Player Bot Active!**", reply_markup=main_menu(), parse_mode="Markdown")
+    welcome_text = f"🤖 The Profit Player | 👋 Hello, {message.from_user.first_name}!\n✔️ Select a service from the buttons below:"
+    try:
+        # ছবির লিঙ্ক ঠিক থাকলে ছবিসহ পাঠাবে
+        bot.send_photo(message.chat.id, WELCOME_IMAGE, caption=welcome_text, reply_markup=main_menu())
+    except:
+        # ছবি কাজ না করলে শুধু টেক্সট পাঠাবে
+        bot.send_message(message.chat.id, welcome_text, reply_markup=main_menu())
 
+# --- গেট নাম্বার প্রসেস ---
 @bot.message_handler(func=lambda m: m.text == "📞 Get Number")
 def show_services(m):
     try:
-        res = requests.get(f"{BASE_URL}/liveaccess", headers=HEADERS, timeout=10).json()
+        res = requests.get(f"{BASE_URL}/liveaccess", headers=HEADERS).json()
         if res['meta']['code'] == 200:
             services = res['data']['services']
             markup = types.InlineKeyboardMarkup(row_width=2)
             for s in services:
                 markup.add(types.InlineKeyboardButton(f"📱 {s['sid']}", callback_data=f"ser_{s['sid']}"))
-            bot.send_message(m.chat.id, "🐸 **সেবা নির্বাচন করুন:**", reply_markup=markup, parse_mode="Markdown")
+            # কাস্টম রেঞ্জ বাটন
+            markup.add(types.InlineKeyboardButton("🌍 Custom Range", callback_data="custom_range"))
+            bot.send_message(m.chat.id, "✨ **সার্ভিস নির্বাচন করুন:**", reply_markup=markup)
     except: pass
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("ser_"))
@@ -100,62 +107,69 @@ def show_ranges(call):
     sid = call.data.split("_")[1]
     try:
         res = requests.get(f"{BASE_URL}/liveaccess", headers=HEADERS).json()
-        services = res['data']['services']
-        selected = next((item for item in services if item['sid'] == sid), None)
+        selected = next((item for item in res['data']['services'] if item['sid'] == sid), None)
+        markup = types.InlineKeyboardMarkup(row_width=1)
         if selected:
-            markup = types.InlineKeyboardMarkup(row_width=1)
             for r in selected['ranges']:
-                rid = r.replace("XXX", "")
-                markup.add(types.InlineKeyboardButton(f"🌍 Range: {r}", callback_data=f"buy_{sid}_{rid}"))
-            bot.edit_message_text(f"🌐 **{sid} Service**\nSelect range:", call.message.chat.id, call.message.message_id, reply_markup=markup)
+                rid = r.replace("XXX", "").replace("X", "")
+                markup.add(types.InlineKeyboardButton(f"🌍 Range: {r}", callback_data=f"buy_Any_{rid}"))
+        bot.edit_message_text(f"🎯 **{sid}** এর জন্য রেঞ্জ সিলেক্ট করুন:", call.message.chat.id, call.message.message_id, reply_markup=markup)
     except: pass
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("buy_"))
-def buy_process(call):
-    _, sid, rid = call.data.split("_")
-    user_name = call.from_user.first_name
-    bot.edit_message_text(f"⏳ **নাম্বার খোঁজা হচ্ছে...**", call.message.chat.id, call.message.message_id)
+@bot.callback_query_handler(func=lambda call: call.data == "custom_range")
+def custom_range_input(call):
+    msg = bot.send_message(call.message.chat.id, "⌨️ **রেঞ্জটি লিখুন (যেমন: 224654):**")
+    bot.register_next_step_handler(msg, process_custom_buy)
+
+def process_custom_buy(message):
+    rid = message.text.strip().replace("X", "").replace("x", "")
+    if rid.isdigit():
+        buy_action(message, rid)
+    else:
+        bot.reply_to(message, "❌ ভুল রেঞ্জ ফরম্যাট।")
+
+# --- নাম্বার ক্রয় ফাংশন ---
+def buy_action(m, rid):
+    user_name = m.from_user.first_name
+    bot.send_message(m.chat.id, "⏳ নাম্বার খোঁজা হচ্ছে...")
     try:
-        res = requests.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=HEADERS, timeout=15).json()
+        res = requests.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=HEADERS).json()
         if res['meta']['code'] == 200:
             num = res['data']['no_plus_number']
             full_num = res['data']['full_number']
-            
-            # নাম্বারের নিচেই গ্রুপের লিঙ্ক বাটন আকারে দেওয়া হলো
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("📢 আমাদের গ্রুপে জয়েন করুন", url=GROUP_LINK))
-            
-            bot.edit_message_text(f"✅ **Number Received!**\n📱 `{full_num}`\n⏳ ওটিপির জন্য অপেক্ষা করুন...", 
-                                  call.message.chat.id, call.message.message_id, 
-                                  reply_markup=markup, parse_mode="Markdown")
-            
-            threading.Thread(target=poll_otp, args=(call.message.chat.id, num, user_name)).start()
+            bot.send_message(m.chat.id, f"✅ **Number Received!**\n📱 `{full_num}`\n⏳ ওটিপির জন্য অপেক্ষা করুন...", 
+                             reply_markup=markup, parse_mode="Markdown")
+            threading.Thread(target=poll_otp, args=(m.chat.id, num, user_name)).start()
         else:
-            bot.answer_callback_query(call.id, f"❌ {res['message']}", show_alert=True)
+            bot.send_message(m.chat.id, f"❌ {res['message']}")
     except: pass
 
-@bot.message_handler(func=lambda m: m.text == "💰 Balance")
-def check_balance(m):
-    bot.reply_to(m, "💰 Your API account balance needs check.")
+@bot.callback_query_handler(func=lambda call: call.data.startswith("buy_"))
+def buy_callback(call):
+    rid = call.data.split("_")[2]
+    buy_action(call.message, rid)
 
-@bot.message_handler(func=lambda m: m.text == "🖥️ Console")
-def show_console(m):
-    try:
-        res = requests.get(f"{BASE_URL}/console", headers=HEADERS).json()
-        if res['meta']['code'] == 200:
+# --- কনসোল এবং ব্যালেন্স বাটন ---
+@bot.message_handler(func=lambda m: True)
+def handle_text(m):
+    if m.text == "💰 Balance":
+        bot.reply_to(m, "💰 আপনার ব্যালেন্স এপিআই ড্যাশবোর্ড থেকে চেক করুন।")
+    elif m.text == "🖥️ Console":
+        try:
+            res = requests.get(f"{BASE_URL}/console", headers=HEADERS).json()
             hits = res['data'].get('hits', [])
-            console_text = "🖥️ **Live Hit Console**\n━━━━━━━━━━━━━━\n"
-            for hit in hits[:5]:
-                console_text += f"🔹 {hit['sid']} | `{hit['range']}`\n"
-            bot.send_message(m.chat.id, console_text, parse_mode="Markdown")
-    except: pass
+            txt = "🖥️ **Live Active Console**\n━━━━━━━━━━━━━━\n"
+            for h in hits[:10]:
+                txt += f"🔹 {h['sid']} | `{mask_number(h['range'])}` | Code: {extract_otp(h['message'])}\n"
+            bot.send_message(m.chat.id, txt, parse_mode="Markdown")
+        except: pass
+    else:
+        bot.reply_to(m, "⚙️ এই ফিচারটি শীঘ্রই যুক্ত করা হবে।")
 
-# --- বট স্টার্ট লুপ ---
+# --- বট স্টার্ট ---
 if __name__ == "__main__":
     threading.Thread(target=run_web_server).start()
-    print("Profit Player Bot is Starting...")
-    while True:
-        try:
-            bot.polling(none_stop=True, interval=0, timeout=40)
-        except:
-            time.sleep(10)
+    print("Bot is Starting...")
+    bot.polling(none_stop=True)
