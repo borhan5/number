@@ -13,7 +13,7 @@ WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg"
 
 session = requests.Session()
 
-# Full Country Database
+# Full Country Database (Unchanged)
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -53,7 +53,7 @@ bot = telebot.TeleBot(API_TOKEN)
 app = Flask('')
 
 @app.route('/')
-def home(): return "SYNC MODE WITH FULL OTP ACTIVE"
+def home(): return "SYNC MODE: FB & INSTA ACTIVE"
 def run(): app.run(host='0.0.0.0', port=8080)
 def keep_alive(): Thread(target=run).start()
 
@@ -67,7 +67,7 @@ def detect_country(range_str):
     return None
 
 def monitor_otp(chat_id, number, svc):
-    """ওটিপি মনিটর করবে এবং ফুল মেসেজ পাঠাবে"""
+    """ওটিপি মনিটর করে ফুল মেসেজ ইউজারকে পাঠাবে"""
     start_time = time.time()
     while time.time() - start_time < 600:
         try:
@@ -76,11 +76,10 @@ def monitor_otp(chat_id, number, svc):
                 for item in res['data'].get('otps', []):
                     if str(item['number']) == str(number):
                         msg = item['message']
-                        # আপডেট: এখন সব সার্ভিসের জন্য ফুল মেসেজ যাবে
+                        # FB এবং Insta সহ সব সার্ভিসের জন্য ফুল মেসেজ যাবে
                         final_text = f"✅ *{svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
                         
                         bot.send_message(chat_id, final_text, parse_mode="Markdown")
-                        # গ্রুপে লগ পাঠানো
                         bot.send_message(GROUP_ID, f"🔔 *OTP LOG*\nSvc: {svc}\nNum: {number}\nMsg: {msg}")
                         return
         except: pass
@@ -90,7 +89,7 @@ def monitor_otp(chat_id, number, svc):
 def start_handler(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("📞 Get Number", "💰 Balance")
-    bot.send_photo(message.chat.id, WELCOME_IMAGE, caption="👋 Hello!\n**Sync Mode** ও **Full Message OTP** সিস্টেম চালু হয়েছে।", reply_markup=markup)
+    bot.send_photo(message.chat.id, WELCOME_IMAGE, caption="👋 Hello!\n**Sync Mode** (FB & Instagram) এবং **Full Message OTP** চালু আছে।", reply_markup=markup)
 
 @bot.message_handler(func=lambda message: message.text == "📞 Get Number")
 def service_menu(message):
@@ -104,7 +103,7 @@ def service_menu(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def query_handler(call):
-    # সিঙ্ক মোড থেকে সার্ভিস অনুযায়ী রেঞ্জ দেখানো
+    # FB এবং Instagram উভয়ের জন্য একই সিঙ্ক মোড লজিক
     if call.data.startswith("svc_"):
         svc = call.data.split("_")[1]
         res = session.get(f"{BASE_URL}/liveaccess", headers=get_headers()).json()
@@ -117,7 +116,7 @@ def query_handler(call):
                         c_code = detect_country(r)
                         if c_code: sync_list.append((c_code, r))
             
-            top_ranges = sync_list[:8] # টপ ৮টি রেঞ্জ দেখানো হবে
+            top_ranges = sync_list[:10] 
             for code, rid in top_ranges:
                 c = COUNTRY_DATA[code]
                 clean_rid = rid.replace("XXX", "")
@@ -125,7 +124,6 @@ def query_handler(call):
             
             bot.edit_message_text(f"🚀 *SYNC MODE:* {svc} Available Ranges:", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
 
-    # নম্বর কেনা এবং নম্বর চেঞ্জ লজিক
     elif call.data.startswith("buy_"):
         _, svc, rid = call.data.split("_")
         bot.answer_callback_query(call.id, "Allocating Number...")
@@ -134,7 +132,6 @@ def query_handler(call):
         if order.get('meta', {}).get('code') == 200:
             num = order['data']['full_number']
             
-            # নম্বর চেঞ্জ বাটন
             mk = types.InlineKeyboardMarkup()
             mk.add(types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"buy_{svc}_{rid}"))
             mk.add(types.InlineKeyboardButton("📢 JOIN GROUP", url=GROUP_LINK))
@@ -143,10 +140,9 @@ def query_handler(call):
                                  f"📞 Number: `{num}`\n"
                                  f"🛠 Service: `{svc}`\n"
                                  f"⏳ Status: Waiting for OTP...\n━━━━━━━━━━━━━━━━━━━━\n"
-                                 f"💡 ওটিপি না আসলে 'Change Number' এ ক্লিক করুন।", 
+                                 f"💡 ওটিপি না আসলে 'Change Number' ক্লিক করুন।", 
                                  call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
             
-            # ওটিপি ট্র্যাকিং শুরু
             Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
         else:
             bot.send_message(call.message.chat.id, "❌ Error: Stock empty or No Balance for this range.")
