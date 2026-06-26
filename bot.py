@@ -53,7 +53,7 @@ bot = telebot.TeleBot(API_TOKEN)
 app = Flask('')
 
 @app.route('/')
-def home(): return "SYNC MODE WITH CHANGE OPTION ACTIVE"
+def home(): return "SYNC MODE WITH FULL OTP ACTIVE"
 def run(): app.run(host='0.0.0.0', port=8080)
 def keep_alive(): Thread(target=run).start()
 
@@ -67,7 +67,7 @@ def detect_country(range_str):
     return None
 
 def monitor_otp(chat_id, number, svc):
-    """ওটিপি মনিটর করবে ২ সেকেন্ড পর পর"""
+    """ওটিপি মনিটর করবে এবং ফুল মেসেজ পাঠাবে"""
     start_time = time.time()
     while time.time() - start_time < 600:
         try:
@@ -76,16 +76,11 @@ def monitor_otp(chat_id, number, svc):
                 for item in res['data'].get('otps', []):
                     if str(item['number']) == str(number):
                         msg = item['message']
-                        if "facebook" in svc.lower():
-                            otp_match = re.findall(r'\b\d{4,8}\b', msg)
-                            otp_code = otp_match[0] if otp_match else "EXTRACTED"
-                            final_text = f"✅ *FACEBOOK OTP RECEIVED!*\n\n🔢 CODE: `{otp_code}`\n💬 MSG: `{msg}`\n📱 NUM: `{number}`"
-                        else:
-                            # ইনস্টাগ্রাম বা অন্যদের জন্য ফুল মেসেজ
-                            final_text = f"✅ *{svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
+                        # আপডেট: এখন সব সার্ভিসের জন্য ফুল মেসেজ যাবে
+                        final_text = f"✅ *{svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
                         
                         bot.send_message(chat_id, final_text, parse_mode="Markdown")
-                        # গ্রুপে পাঠানো
+                        # গ্রুপে লগ পাঠানো
                         bot.send_message(GROUP_ID, f"🔔 *OTP LOG*\nSvc: {svc}\nNum: {number}\nMsg: {msg}")
                         return
         except: pass
@@ -95,7 +90,7 @@ def monitor_otp(chat_id, number, svc):
 def start_handler(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("📞 Get Number", "💰 Balance")
-    bot.send_photo(message.chat.id, WELCOME_IMAGE, caption="👋 Hello!\n**Sync Mode** ও **Number Change** অপশন এখন চালু আছে।", reply_markup=markup)
+    bot.send_photo(message.chat.id, WELCOME_IMAGE, caption="👋 Hello!\n**Sync Mode** ও **Full Message OTP** সিস্টেম চালু হয়েছে।", reply_markup=markup)
 
 @bot.message_handler(func=lambda message: message.text == "📞 Get Number")
 def service_menu(message):
@@ -109,7 +104,7 @@ def service_menu(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def query_handler(call):
-    # সার্ভিস থেকে রেঞ্জ দেখানো (টপ ১-৫)
+    # সিঙ্ক মোড থেকে সার্ভিস অনুযায়ী রেঞ্জ দেখানো
     if call.data.startswith("svc_"):
         svc = call.data.split("_")[1]
         res = session.get(f"{BASE_URL}/liveaccess", headers=get_headers()).json()
@@ -122,13 +117,13 @@ def query_handler(call):
                         c_code = detect_country(r)
                         if c_code: sync_list.append((c_code, r))
             
-            top_5 = sync_list[:5] # টপ ৫টি কান্ট্রি/রেঞ্জ
-            for code, rid in top_5:
+            top_ranges = sync_list[:8] # টপ ৮টি রেঞ্জ দেখানো হবে
+            for code, rid in top_ranges:
                 c = COUNTRY_DATA[code]
                 clean_rid = rid.replace("XXX", "")
                 mk.add(types.InlineKeyboardButton(f"⚡ {c['flag']} {c['name']} (Range: {clean_rid})", callback_data=f"buy_{svc}_{clean_rid}"))
             
-            bot.edit_message_text(f"🚀 *SYNC MODE:* Top 5 {svc} Countries:", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+            bot.edit_message_text(f"🚀 *SYNC MODE:* {svc} Available Ranges:", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
 
     # নম্বর কেনা এবং নম্বর চেঞ্জ লজিক
     elif call.data.startswith("buy_"):
@@ -136,10 +131,10 @@ def query_handler(call):
         bot.answer_callback_query(call.id, "Allocating Number...")
         
         order = session.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=get_headers()).json()
-        if order['meta']['code'] == 200:
+        if order.get('meta', {}).get('code') == 200:
             num = order['data']['full_number']
             
-            # নম্বর চেঞ্জ বাটন যোগ করা
+            # নম্বর চেঞ্জ বাটন
             mk = types.InlineKeyboardMarkup()
             mk.add(types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"buy_{svc}_{rid}"))
             mk.add(types.InlineKeyboardButton("📢 JOIN GROUP", url=GROUP_LINK))
@@ -154,7 +149,7 @@ def query_handler(call):
             # ওটিপি ট্র্যাকিং শুরু
             Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
         else:
-            bot.send_message(call.message.chat.id, "❌ Error: Stock empty or No Balance.")
+            bot.send_message(call.message.chat.id, "❌ Error: Stock empty or No Balance for this range.")
 
 if __name__ == "__main__":
     keep_alive()
