@@ -10,8 +10,9 @@ GROUP_ID = -1003968881110
 GROUP_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
 
+# আপনার দেওয়া সম্পূর্ণ কান্ট্রি ডাটাবেস
 COUNTRY_DATA = {
-    "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia", "flag": "🇷🇺"},
+    "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
     "212": {"name": "Morocco", "flag": "🇲🇦"}, "213": {"name": "Algeria", "flag": "🇩🇿"},
     "216": {"name": "Tunisia", "flag": "🇹🇳"}, "218": {"name": "Libya", "flag": "🇱🇾"},
@@ -119,20 +120,23 @@ bot = telebot.TeleBot(API_TOKEN)
 app = Flask('')
 
 @app.route('/')
-def home(): return "VOLTX Professional Bot is Online"
+def home(): return "VOLTX Auto-Traffic Bot is Online"
 def run(): app.run(host='0.0.0.0', port=8080)
 def keep_alive(): Thread(target=run).start()
 
 def get_headers(): return {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-def mask_number(num):
-    if len(num) > 10: return f"{num[:7]}***{num[-3:]}"
-    return num
+# ফ্ল্যাগ ও দেশের নাম পাওয়ার ফাংশন
+def get_country_info(prefix):
+    for length in [3, 2, 1]:
+        p = prefix[:length]
+        if p in COUNTRY_DATA:
+            return COUNTRY_DATA[p]
+    return {"name": "Unknown", "flag": "🌍"}
 
 def extract_clean_otp(message):
-    codes = re.findall(r'\b\d{5,6}\b', message)
-    if codes: return codes[0]
-    return "Received"
+    codes = re.findall(r'\b\d{4,6}\b', message)
+    return codes[0] if codes else "Received"
 
 def monitor_otp(chat_id, number, svc):
     start_time = time.time()
@@ -140,86 +144,84 @@ def monitor_otp(chat_id, number, svc):
         try:
             res = requests.get(f"{BASE_URL}/success-otp", headers=get_headers()).json()
             if res.get('meta', {}).get('code') == 200:
-                for item in res.get('data', {}).get('otps', []):
+                for item in res['data']['otps']:
                     if item['number'] == number:
                         otp_code = extract_clean_otp(item['message'])
-                        success_text = (f"✅ *{svc} OTP RECEIVED!*\n\n"
-                                      f"📱 Number: `{number}`\n"
-                                      f"🔢 OTP Code: `{otp_code}`\n\n"
-                                      f"💬 Full Message: `{item['message']}`")
-                        bot.send_message(chat_id, success_text, parse_mode="Markdown")
-                        group_log = (f"🔔 *New OTP Log*\n"
-                                     f"━━━━━━━━━━━━━━\n"
-                                     f"👤 Service: {svc}\n"
-                                     f"📱 Number: `{mask_number(number)}`\n"
-                                     f"🔢 OTP Code: `{otp_code}`\n"
-                                     f"━━━━━━━━━━━━━━")
-                        bot.send_message(GROUP_ID, group_log, parse_mode="Markdown")
+                        # ইউজারকে জানানো
+                        bot.send_message(chat_id, f"✅ *{svc} OTP RECEIVED!*\n\n📱 Number: `{number}`\n🔢 OTP Code: `{otp_code}`\n\n💬 Msg: `{item['message']}`", parse_mode="Markdown")
+                        # গ্রুপে লগ পাঠানো
+                        log_text = f"🔔 *New OTP Log*\n━━━━━━━━━━━━━━\n👤 Service: {svc}\n📱 Number: `{number[:7]}***` \n🔢 OTP: `{otp_code}`\n━━━━━━━━━━━━━━"
+                        bot.send_message(GROUP_ID, log_text, parse_mode="Markdown")
                         return
         except: pass
-        time.sleep(10)
+        time.sleep(5)
 
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start', 'get_number'])
 def welcome(message):
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("📱 Get Number", callback_data="get_number_main"))
-    bot.send_message(message.chat.id, "🌟 *VOLTX PREMIUM AUTO BOT*\nSelect an option to start:", parse_mode="Markdown", reply_markup=markup)
+    bot.set_my_commands([
+        telebot.types.BotCommand("start", "🔄 Restart Bot"),
+        telebot.types.BotCommand("get_number", "📱 Get Number")
+    ])
+    mk = types.InlineKeyboardMarkup()
+    mk.add(types.InlineKeyboardButton("📱 Get Number (Auto Traffic)", callback_data="get_auto"))
+    bot.send_message(message.chat.id, "🌟 *VOLTX AUTO CONSOLE BOT*\n\nলাইভ কনসোল থেকে সেরা ট্রাফিক ডিরেক্ট সিলেক্ট করা হবে।", parse_mode="Markdown", reply_markup=mk)
 
 @bot.callback_query_handler(func=lambda call: True)
-def handle_callbacks(call):
-    if call.data == "get_number_main":
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("Facebook", callback_data="svc_Facebook"),
-                   types.InlineKeyboardButton("Instagram", callback_data="svc_Instagram"),
-                   types.InlineKeyboardButton("WhatsApp", callback_data="svc_WhatsApp"))
-        bot.edit_message_text("🛠 *Select Service:*", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=markup)
+def handle_query(call):
+    if call.data == "get_auto":
+        mk = types.InlineKeyboardMarkup(row_width=2)
+        mk.add(
+            types.InlineKeyboardButton("📘 Facebook", callback_data="auto_Facebook"),
+            types.InlineKeyboardButton("📸 Instagram", callback_data="auto_Instagram"),
+            types.InlineKeyboardButton("💬 WhatsApp", callback_data="auto_WhatsApp")
+        )
+        bot.edit_message_text("🛠 *সার্ভিস সিলেক্ট করুন (অটোমেটিক):*", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
 
-    elif call.data.startswith("svc_"):
+    elif call.data.startswith("auto_"):
         svc = call.data.split("_")[1]
-        bot.answer_callback_query(call.id, "Filtering live traffic countries...")
+        bot.answer_callback_query(call.id, f"Searching Best Traffic for {svc}...")
+        
+        # লাইভ ট্রাফিক থেকে সেরা দেশ খুঁজে বের করা
         res = requests.get(f"{BASE_URL}/liveaccess", headers=get_headers()).json()
-        active_codes = []
+        
+        best_rid = None
+        best_prefix = ""
+        
         if res.get('meta', {}).get('code') == 200:
             for s in res['data']['services']:
                 if s['sid'].lower() == svc.lower():
-                    active_codes = list(set([r[:3] for r in s['ranges']] + [r[:2] for r in s['ranges']] + [r[:1] for r in s['ranges']]))
-        markup = types.InlineKeyboardMarkup(row_width=3)
-        btns = [types.InlineKeyboardButton(f"{COUNTRY_DATA[c]['flag']} {COUNTRY_DATA[c]['name']}", callback_data=f"allocate_{svc}_{c}") for c in active_codes if c in COUNTRY_DATA]
-        if not btns:
-            bot.send_message(call.message.chat.id, f"❌ No live traffic for {svc} currently.")
-            return
-        markup.add(*btns)
-        markup.add(types.InlineKeyboardButton("🔙 Back", callback_data="get_number_main"))
-        bot.edit_message_text(f"🌍 *Full Traffic Countries for {svc}:*", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=markup)
-
-    elif call.data.startswith("allocate_"):
-        _, svc, code = call.data.split("_")
-        bot.answer_callback_query(call.id, "Allocating...")
-        res = requests.get(f"{BASE_URL}/liveaccess", headers=get_headers()).json()
-        target_rid = None
-        for s in res['data']['services']:
-            if s['sid'].lower() == svc.lower():
-                for r in s['ranges']:
-                    if r.startswith(code):
-                        target_rid = r.replace("XXX", "")
+                    if s['ranges']:
+                        # প্রথম রেঞ্জটিই হাই ট্রাফিক হিসেবে গণ্য হবে
+                        target_range = s['ranges'][0]
+                        best_prefix = target_range[:3]
+                        best_rid = target_range.replace("XXX", "")
                         break
-        if not target_rid:
-            bot.send_message(call.message.chat.id, "❌ Range no longer available.")
+        
+        if not best_rid:
+            bot.send_message(call.message.chat.id, "❌ বর্তমানে কোনো ট্রাফিক নেই।")
             return
-        order = requests.post(f"{BASE_URL}/getnum", json={"rid": target_rid}, headers=get_headers()).json()
-        if order['meta']['code'] == 200:
+
+        # নম্বর অর্ডার করা
+        order = requests.post(f"{BASE_URL}/getnum", json={"rid": best_rid}, headers=get_headers()).json()
+        
+        if order.get('meta', {}).get('code') == 200:
             num = order['data']['full_number']
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"allocate_{svc}_{code}"))
-            markup.add(types.InlineKeyboardButton("📢 OTP Group", url=GROUP_LINK))
-            bot.edit_message_text(f"✅ *{svc} Number Allocated*\n\n"
-                                 f"📞 Number: `{num}`\n"
-                                 f"🌍 Country: {COUNTRY_DATA[code]['name']} {COUNTRY_DATA[code]['flag']}\n\n"
-                                 f"⏳ *Status:* Waiting for OTP Automatically...", 
-                                 call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=markup)
+            c_info = get_country_info(best_prefix)
+            
+            mk = types.InlineKeyboardMarkup()
+            mk.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"auto_{svc}"))
+            mk.add(types.InlineKeyboardButton("📢 Join Group", url=GROUP_LINK))
+            
+            bot.edit_message_text(f"🚀 *Best Traffic Found!*\n\n"
+                                 f"👤 Service: *{svc}*\n"
+                                 f"🌍 Country: {c_info['name']} {c_info['flag']}\n"
+                                 f"📞 Number: `{num}`\n\n"
+                                 f"⏳ ওটিপি কনসোল অটো চেক করা হচ্ছে...", 
+                                 call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+            
             Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
         else:
-            bot.send_message(call.message.chat.id, "❌ Out of stock. Try again.")
+            bot.send_message(call.message.chat.id, "❌ নম্বর পাওয়া যায়নি। অন্য সার্ভিসে ট্রাই করুন।")
 
 if __name__ == "__main__":
     keep_alive()
