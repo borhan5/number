@@ -4,3 +4,7 @@ flask
 waitress
 httpx
 aiogram
+pyTelegramBotAPI
+requests
+flask
+gunicorn
