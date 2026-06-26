@@ -21,7 +21,7 @@ HEADERS = {'mauthapi': API_KEY, 'Content-Type': 'application/json'}
 
 active_sessions = {} 
 
-# --- ULTIMATE GLOBAL COUNTRY DATABASE (২০০+ দেশের লিস্ট আগের মতোই আছে) ---
+# --- COUNTRY DATABASE ---
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -147,7 +147,7 @@ def main_menu():
     markup.add("📞 Get Number", "🎯 Custom Range", "🖥️ Console", "📊 Stats")
     return markup
 
-# --- OTP POLLING (SPECIAL LOGIC FOR INSTAGRAM) ---
+# --- OTP POLLING ---
 def poll_otp(chat_id, num, user_name, service_name):
     start_time = time.time()
     active_sessions[chat_id] = num
@@ -163,54 +163,48 @@ def poll_otp(chat_id, num, user_name, service_name):
                     if str(o['number']) == str(num):
                         raw_msg = o['message']
                         
-                        # Instagram Detection (Handle 123 456 format)
-                        if "instagram" in raw_msg.lower():
+                        # --- INSTAGRAM DIRECT LOGIC ---
+                        if "instagram" in raw_msg.lower() or "ig" in service_name.lower():
                             otp_match = re.search(r'(\d{3}\s\d{3})|(\d{6})', raw_msg)
                             if otp_match:
                                 code = otp_match.group()
-                                clean_code = code.replace(" ", "") # Copy করার জন্য স্পেস ছাড়া কোড
+                                clean_code = code.replace(" ", "")
                                 bot.send_message(chat_id, 
                                     f"📸 **INSTAGRAM OTP RECEIVED!**\n"
                                     f"━━━━━━━━━━━━━━━━━━\n"
-                                    f"📱 Number: `{num}`\n"
                                     f"🔑 Code: `{clean_code}`\n"
+                                    f"💬 Message: `{raw_msg}`\n"
                                     f"━━━━━━━━━━━━━━━━━━\n"
                                     f"💡 *Tap to copy code.*", parse_mode="Markdown")
                             else:
-                                bot.send_message(chat_id, f"🔑 Instagram OTP: `{raw_msg}`", parse_mode="Markdown")
+                                bot.send_message(chat_id, f"📸 **INSTAGRAM MSG:**\n`{raw_msg}`", parse_mode="Markdown")
                         
                         # Facebook Detection
                         elif "facebook" in raw_msg.lower():
-                            otp_match = re.search(r'\d{5,6}', raw_msg)
+                            otp_match = re.search(r'\d{5,8}', raw_msg)
                             code = otp_match.group() if otp_match else raw_msg
                             bot.send_message(chat_id, f"⚡️ **FACEBOOK OTP:** `{code}`", parse_mode="Markdown")
                         
-                        # Default Detection
+                        # Default
                         else:
                             otp_match = re.search(r'\d{4,8}', raw_msg)
                             code = otp_match.group() if otp_match else raw_msg
                             bot.send_message(chat_id, f"🔑 **OTP RECEIVED:** `{code}`", parse_mode="Markdown")
                         
-                        # Log to Group
-                        log = (f"📢 **SUCCESSFUL ACTIVATION**\n"
-                               f"👤 User: {user_name}\n"
-                               f"📱 Number: `{num}`\n"
-                               f"🌐 Service: {service_name}")
-                        bot.send_message(GROUP_ID, log, parse_mode="Markdown")
+                        # Group Log
+                        bot.send_message(GROUP_ID, f"📢 **SUCCESS**\n👤 {user_name}\n📱 `{num}`\n🌐 {service_name}", parse_mode="Markdown")
                         
                         if chat_id in active_sessions: del active_sessions[chat_id]
                         return
         except: pass
         time.sleep(8)
 
-# --- LIVE CONSOLE CHECKER (DYNAMIC RANGE FOR INSTAGRAM) ---
+# --- LIVE CONSOLE CHECKER ---
 def get_live_hit_ranges(target_service_keys):
-    """Console থেকে বর্তমানে সাকসেসফুল রেঞ্জগুলো নিয়ে আসে"""
     try:
         res = requests.get(f"{BASE_URL}/console", headers=HEADERS).json()
         if res['meta']['code'] == 200:
             hits = res['data'].get('hits', [])
-            # ফিল্টার: সার্ভিসের নাম মিললে সেই রেঞ্জগুলো নিবে
             active_ranges = [h['range'] for h in hits if any(k in h['sid'].lower() for k in target_service_keys)]
             return list(set(active_ranges)) 
     except: pass
@@ -219,18 +213,13 @@ def get_live_hit_ranges(target_service_keys):
 # --- HANDLERS ---
 @bot.message_handler(commands=['start'])
 def start(message):
-    welcome = (f"👋 **Hello {message.from_user.first_name}!**\n\n"
-               f"Welcome to **Borhan Premium OTP**.\n"
-               f"Instant numbers for WhatsApp, Facebook, Instagram & more.\n\n"
-               f"👨‍💻 **Dev:** [BORHAN](https://t.me/BORHANSB)")
-    bot.send_message(message.chat.id, welcome, reply_markup=main_menu(), parse_mode="Markdown", disable_web_page_preview=True)
+    bot.send_message(message.chat.id, f"👋 Hello {message.from_user.first_name}!\nWelcome to **Borhan OTP**.", reply_markup=main_menu(), parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text == "📞 Get Number")
 def choose_service(m):
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.add(
         types.InlineKeyboardButton("📘 Facebook", callback_data="select_facebook"),
-        types.InlineKeyboardButton("🔥 FB New Range (5★)", callback_data="select_newfb"),
         types.InlineKeyboardButton("📸 Instagram", callback_data="select_instagram"),
         types.InlineKeyboardButton("🟢 WhatsApp", callback_data="select_whatsapp")
     )
@@ -239,43 +228,39 @@ def choose_service(m):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("select_"))
 def show_countries(call):
     service_type = call.data.split("_")[1]
-    bot.edit_message_text(f"🔍 Analyzing stocks for {service_type.upper()}...", call.message.chat.id, call.message.message_id)
+    bot.edit_message_text(f"🔍 Stock checking for {service_type.upper()}...", call.message.chat.id, call.message.message_id)
     
+    # Instagram এবং Facebook এর জন্য একই রেঞ্জ দেখানোর লজিক
+    if service_type in ["facebook", "instagram"]:
+        target_keys = ["fb", "facebook", "ig", "instagram"]
+    elif service_type == "whatsapp":
+        target_keys = ["wa", "whatsapp"]
+    else:
+        target_keys = [service_type]
+
     try:
         res = requests.get(f"{BASE_URL}/liveaccess", headers=HEADERS).json()
         if res['meta']['code'] == 200:
             markup = types.InlineKeyboardMarkup(row_width=1)
             seen = set()
-            
-            # Key Mapping
-            if service_type == "facebook": target_keys = ["fb", "facebook"]
-            elif service_type == "instagram": target_keys = ["ig", "instagram"]
-            elif service_type == "whatsapp": target_keys = ["wa", "whatsapp"]
-            elif service_type == "newfb": target_keys = ["fb", "facebook"]
-
-            # --- DYNAMIC 5★ LOGIC FOR INSTAGRAM & FB ---
             live_hits = get_live_hit_ranges(target_keys)
 
             for s in res['data']['services']:
+                # ফিল্টার: যদি সার্ভিস কী এর সাথে মিলে যায়
                 if any(k in s['sid'].lower() for k in target_keys):
                     for r in s['ranges']:
-                        # FB New Range এর ফিল্টার আগের মতোই
-                        if service_type == "newfb" and r not in live_hits:
-                            continue
-                            
                         info = get_flag_info(r)
                         if info['name'] not in seen:
                             rid = r.replace("X", "")
-                            # ইনস্টাগ্রাম বা ফেসবুকে লাইভ হিট থাকলে ৫-স্টার দেখাবে
                             star = "⭐️⭐️⭐️⭐️⭐️" if r in live_hits else ""
                             markup.add(types.InlineKeyboardButton(f"{info['flag']} {info['name']} ({r}) {star}", callback_data=f"buy_{s['sid']}_{rid}"))
                             seen.add(info['name'])
                         if len(seen) >= 25: break
             
             if not seen:
-                bot.edit_message_text(f"❌ No active stock for {service_type.title()} right now.", call.message.chat.id, call.message.message_id)
+                bot.edit_message_text(f"❌ No stock for {service_type.title()}.", call.message.chat.id, call.message.message_id)
             else:
-                bot.edit_message_text(f"🌍 **Live {service_type.title()} Stocks:**", call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
+                bot.edit_message_text(f"🌍 **{service_type.title()} Available Countries:**", call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
     except: pass
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("buy_") or call.data.startswith("change_"))
@@ -285,7 +270,7 @@ def buy_number(call):
     chat_id = call.message.chat.id
     
     if chat_id in active_sessions: del active_sessions[chat_id]
-    bot.edit_message_text("⏳ **Purchasing Premium Number...**", chat_id, call.message.message_id)
+    bot.edit_message_text("⏳ **Purchasing Number...**", chat_id, call.message.message_id)
     
     try:
         res = requests.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=HEADERS).json()
@@ -295,43 +280,41 @@ def buy_number(call):
             info = get_flag_info(num)
             
             markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"change_{sid}_{rid}"),
+            markup.add(types.InlineKeyboardButton("🔄 Change", callback_data=f"change_{sid}_{rid}"),
                        types.InlineKeyboardButton("❌ Cancel", callback_data="cancel_order"))
 
             msg = (f"✅ **Number Purchased!**\n━━━━━━━━━━━━━━━━━━\n"
-                   f"🌍 Country: {info['flag']} {info['name']}\n"
+                   f"🌍 {info['flag']} {info['name']}\n"
                    f"📱 Number: `{data['full_number']}`\n"
                    f"🌐 Service: {sid}\n━━━━━━━━━━━━━━━━━━\n"
-                   f"⏳ *Monitoring for incoming OTP...*")
+                   f"⏳ *Waiting for OTP...*")
             
             bot.edit_message_text(msg, chat_id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
             threading.Thread(target=poll_otp, args=(chat_id, num, call.from_user.first_name, sid)).start()
         else:
-            bot.edit_message_text(f"❌ **Stock Alert:** {res['message']}", chat_id, call.message.message_id)
+            bot.edit_message_text(f"❌ {res['message']}", chat_id, call.message.message_id)
     except: pass
 
 @bot.callback_query_handler(func=lambda call: call.data == "cancel_order")
 def cancel_order(call):
     chat_id = call.message.chat.id
     if chat_id in active_sessions: del active_sessions[chat_id]
-    bot.edit_message_text("❌ **Order cancelled.**", chat_id, call.message.message_id)
+    bot.edit_message_text("❌ Order cancelled.", chat_id, call.message.message_id)
 
 @bot.message_handler(func=lambda m: m.text == "🎯 Custom Range")
 def custom_range(m):
-    msg = bot.send_message(m.chat.id, "🎯 **Enter Prefix (e.g. 23672):**", parse_mode="Markdown")
+    msg = bot.send_message(m.chat.id, "🎯 Enter Prefix (e.g. 236):")
     bot.register_next_step_handler(msg, process_custom)
 
 def process_custom(m):
     rid = m.text.strip()
-    info = get_flag_info(rid)
-    loading = bot.send_message(m.chat.id, f"⏳ Searching stock for {rid}...")
     try:
         res = requests.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=HEADERS).json()
         if res['meta']['code'] == 200:
             data = res['data']
-            bot.edit_message_text(f"✅ **Purchased:** `{data['full_number']}`\n🌍 {info['flag']} {info['name']}", m.chat.id, loading.message_id, parse_mode="Markdown")
+            bot.send_message(m.chat.id, f"✅ Purchased: `{data['full_number']}`", parse_mode="Markdown")
             threading.Thread(target=poll_otp, args=(m.chat.id, data['no_plus_number'], m.from_user.first_name, "Custom")).start()
-        else: bot.edit_message_text("❌ Range out of stock.", m.chat.id, loading.message_id)
+        else: bot.send_message(m.chat.id, "❌ Out of stock.")
     except: pass
 
 @bot.message_handler(func=lambda m: m.text == "🖥️ Console")
@@ -339,16 +322,15 @@ def console(m):
     try:
         res = requests.get(f"{BASE_URL}/console", headers=HEADERS).json()
         if res['meta']['code'] == 200:
-            text = "🖥️ **Live Traffic Console:**\n\n"
-            for h in res['data'].get('hits', [])[:12]:
-                info = get_flag_info(h['range'])
-                text += f"{info['flag']} `{h['range']}` | {h['sid']}\n"
+            text = "🖥️ **Live Console:**\n"
+            for h in res['data'].get('hits', [])[:10]:
+                text += f"`{h['range']}` | {h['sid']}\n"
             bot.send_message(m.chat.id, text, parse_mode="Markdown")
     except: pass
 
 @bot.message_handler(func=lambda m: m.text == "📊 Stats")
 def stats(m):
-    bot.reply_to(m, f"📊 **System Status:**\n✅ API: Online\n⚡ Speed: Premium\n👤 Dev: [BORHAN](https://t.me/BORHANSB)", parse_mode="Markdown", disable_web_page_preview=True)
+    bot.reply_to(m, "📊 System Online\n⚡ Speed: Fast", parse_mode="Markdown")
 
 if __name__ == "__main__":
     threading.Thread(target=run_web_server).start()
