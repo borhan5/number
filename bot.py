@@ -13,40 +13,28 @@ WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg"
 
 session = requests.Session()
 
-# পূর্ণাঙ্গ কান্ট্রি ডাটাবেস
+# বিশাল দেশ ও পতাকার ডাটাবেস (All Countries)
 COUNTRY_DATA = {
-    "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
-    "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
-    "212": {"name": "Morocco", "flag": "🇲🇦"}, "213": {"name": "Algeria", "flag": "🇩🇿"},
-    "216": {"name": "Tunisia", "flag": "🇹🇳"}, "218": {"name": "Libya", "flag": "🇱🇾"},
-    "220": {"name": "Gambia", "flag": "🇬🇲"}, "221": {"name": "Senegal", "flag": "🇸🇳"},
-    "222": {"name": "Mauritania", "flag": "🇲🇷"}, "223": {"name": "Mali", "flag": "🇲🇱"},
-    "224": {"name": "Guinea", "flag": "🇬🇳"}, "225": {"name": "Ivory Coast", "flag": "🇨🇮"},
-    "226": {"name": "Burkina Faso", "flag": "🇧🇫"}, "227": {"name": "Niger", "flag": "🇳🇪"},
-    "228": {"name": "Togo", "flag": "🇹🇬"}, "229": {"name": "Benin", "flag": "🇧🇯"},
-    "230": {"name": "Mauritius", "flag": "🇲🇺"}, "231": {"name": "Liberia", "flag": "🇱🇷"},
-    "232": {"name": "Sierra Leone", "flag": "🇸🇱"}, "233": {"name": "Ghana", "flag": "🇬🇭"},
-    "234": {"name": "Nigeria", "flag": "🇳🇬"}, "235": {"name": "Chad", "flag": "🇹🇩"},
-    "236": {"name": "Central Africa", "flag": "🇨🇫"}, "237": {"name": "Cameroon", "flag": "🇨🇲"},
-    "238": {"name": "Cape Verde", "flag": "🇨🇻"}, "239": {"name": "Sao Tome", "flag": "🇸🇹"},
-    "240": {"name": "Equat. Guinea", "flag": "🇬🇶"}, "241": {"name": "Gabon", "flag": "🇬🇦"},
-    "242": {"name": "Congo", "flag": "🇨🇬"}, "243": {"name": "DR Congo", "flag": "🇨🇩"},
-    "244": {"name": "Angola", "flag": "🇦🇴"}, "245": {"name": "Guinea-Bissau", "flag": "🇬🇼"},
-    "248": {"name": "Seychelles", "flag": "🇸🇨"}, "249": {"name": "Sudan", "flag": "🇸🇩"},
-    "250": {"name": "Rwanda", "flag": "🇷🇼"}, "251": {"name": "Ethiopia", "flag": "🇪🇹"},
-    "252": {"name": "Somalia", "flag": "🇸🇴"}, "253": {"name": "Djibouti", "flag": "🇩🇯"},
-    "254": {"name": "Kenya", "flag": "🇰🇪"}, "255": {"name": "Tanzania", "flag": "🇹🇿"},
-    "256": {"name": "Uganda", "flag": "🇺🇬"}, "257": {"name": "Burundi", "flag": "🇧🇮"},
-    "258": {"name": "Mozambique", "flag": "🇲🇿"}, "260": {"name": "Zambia", "flag": "🇿🇲"},
-    "261": {"name": "Madagascar", "flag": "🇲🇬"}, "262": {"name": "Reunion", "flag": "🇷🇪"},
-    "263": {"name": "Zimbabwe", "flag": "🇿🇼"}, "264": {"name": "Namibia", "flag": "🇳🇦"},
-    "265": {"name": "Malawi", "flag": "🇲🇼"}, "266": {"name": "Lesotho", "flag": "🇱🇸"},
-    "267": {"name": "Botswana", "flag": "🇧🇼"}, "268": {"name": "Eswatini", "flag": "🇸🇿"},
-    "269": {"name": "Comoros", "flag": "🇰🇲"}, "27": {"name": "South Africa", "flag": "🇿🇦"},
-    "880": {"name": "Bangladesh", "flag": "🇧🇩"}, "91": {"name": "India", "flag": "🇮🇳"},
-    "92": {"name": "Pakistan", "flag": "🇵🇰"}, "62": {"name": "Indonesia", "flag": "🇮🇩"},
-    "84": {"name": "Vietnam", "flag": "🇻🇳"}, "63": {"name": "Philippines", "flag": "🇵🇭"},
-    "90": {"name": "Turkey", "flag": "🇹🇷"}, "966": {"name": "Saudi Arabia", "flag": "🇸🇦"}
+    "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia", "flag": "🇷🇺"},
+    "20": {"name": "Egypt", "flag": "🇪🇬"}, "212": {"name": "Morocco", "flag": "🇲🇦"},
+    "213": {"name": "Algeria", "flag": "🇩🇿"}, "216": {"name": "Tunisia", "flag": "🇹🇳"},
+    "234": {"name": "Nigeria", "flag": "🇳🇬"}, "233": {"name": "Ghana", "flag": "🇬🇭"},
+    "27": {"name": "South Africa", "flag": "🇿🇦"}, "30": {"name": "Greece", "flag": "🇬🇷"},
+    "31": {"name": "Netherlands", "flag": "🇳🇱"}, "33": {"name": "France", "flag": "🇫🇷"},
+    "34": {"name": "Spain", "flag": "🇪🇸"}, "39": {"name": "Italy", "flag": "🇮🇹"},
+    "40": {"name": "Romania", "flag": "🇷🇴"}, "44": {"name": "UK", "flag": "🇬🇧"},
+    "48": {"name": "Poland", "flag": "🇵🇱"}, "49": {"name": "Germany", "flag": "🇩🇪"},
+    "52": {"name": "Mexico", "flag": "🇲🇽"}, "54": {"name": "Argentina", "flag": "🇦🇷"},
+    "55": {"name": "Brazil", "flag": "🇧🇷"}, "60": {"name": "Malaysia", "flag": "🇲🇾"},
+    "61": {"name": "Australia", "flag": "🇦🇺"}, "62": {"name": "Indonesia", "flag": "🇮🇩"},
+    "63": {"name": "Philippines", "flag": "🇵🇭"}, "65": {"name": "Singapore", "flag": "🇸🇬"},
+    "66": {"name": "Thailand", "flag": "🇹🇭"}, "81": {"name": "Japan", "flag": "🇯🇵"},
+    "82": {"name": "South Korea", "flag": "🇰🇷"}, "84": {"name": "Vietnam", "flag": "🇻🇳"},
+    "86": {"name": "China", "flag": "🇨🇳"}, "880": {"name": "Bangladesh", "flag": "🇧🇩"},
+    "90": {"name": "Turkey", "flag": "🇹🇷"}, "91": {"name": "India", "flag": "🇮🇳"},
+    "92": {"name": "Pakistan", "flag": "🇵🇰"}, "94": {"name": "Sri Lanka", "flag": "🇱🇰"},
+    "966": {"name": "Saudi Arabia", "flag": "🇸🇦"}, "971": {"name": "UAE", "flag": "🇦🇪"},
+    "98": {"name": "Iran", "flag": "🇮🇷"}, "998": {"name": "Uzbekistan", "flag": "🇺🇿"}
 }
 
 bot = telebot.TeleBot(API_TOKEN)
@@ -62,12 +50,11 @@ def get_headers(): return {"mauthapi": VOLTX_KEY, "Content-Type": "application/j
 def detect_country(range_str):
     for length in [3, 2, 1]:
         p = range_str[:length]
-        if p in COUNTRY_DATA:
-            return p
+        if p in COUNTRY_DATA: return p
     return None
 
 def monitor_otp(chat_id, number, svc):
-    """ওটিপি মনিটর করবে এবং ফেসবুক হলে কোড এক্সট্রাক্ট করবে"""
+    """প্রতি ২ সেকেন্ড অন্তর ওটিপি চেক করার ফাস্ট স্ক্যানার"""
     start_time = time.time()
     while time.time() - start_time < 600:
         try:
@@ -76,18 +63,16 @@ def monitor_otp(chat_id, number, svc):
                 for item in res['data'].get('otps', []):
                     if str(item['number']) == str(number):
                         msg = item['message']
+                        # ফেসবুকের জন্য কোড এক্সট্রাক্ট, অন্যদের জন্য ফুল মেসেজ
                         if "facebook" in svc.lower():
-                            # ফেসবুক ওটিপি এক্সট্রাক্ট
-                            otp_match = re.findall(r'\b\d{4,8}\b', msg)
-                            otp_code = otp_match[0] if otp_match else "EXTRACTED"
-                            final_text = f"✅ *FACEBOOK OTP RECEIVED!*\n\n🔢 OTP CODE: `{otp_code}`\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
+                            match = re.findall(r'\b\d{4,8}\b', msg)
+                            code = match[0] if match else "EXTRACTED"
+                            final_text = f"✅ *FACEBOOK OTP RECEIVED!*\n\n🔢 OTP CODE: `{code}`\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
                         else:
-                            # অন্য সব সার্ভিসের জন্য ফুল মেসেজ
                             final_text = f"✅ *{svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
                         
                         bot.send_message(chat_id, final_text, parse_mode="Markdown")
-                        # গ্রুপে লগ পাঠানো
-                        bot.send_message(GROUP_ID, f"🔔 *OTP LOG*\nService: {svc}\nNumber: `{number}`\nMessage: {msg}")
+                        bot.send_message(GROUP_ID, f"🔔 *OTP LOG*\nService: {svc}\nNum: `{number}`\nMsg: {msg}")
                         return
         except: pass
         time.sleep(2)
@@ -96,21 +81,22 @@ def monitor_otp(chat_id, number, svc):
 def start_handler(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("📞 Get Number", "💰 Balance")
-    bot.send_photo(message.chat.id, WELCOME_IMAGE, caption="👋 Hello!\nWelcome to **BSNUMBER OTP BOT**.\n\n✅ Sync Mode: **Active** 🟢", reply_markup=markup)
+    welcome_text = f"👋 Hello {message.from_user.first_name}!\n\n🚀 **Sync Mode (Access): ON** 🟢\nটপ ট্রাফিক রেঞ্জ থেকে নম্বর নেওয়ার জন্য নিচে ক্লিক করুন।"
+    bot.send_photo(message.chat.id, WELCOME_IMAGE, caption=welcome_text, parse_mode="Markdown", reply_markup=markup)
 
 @bot.message_handler(func=lambda message: message.text == "📞 Get Number")
-def get_service(message):
+def service_menu(message):
     mk = types.InlineKeyboardMarkup(row_width=2)
     mk.add(
         types.InlineKeyboardButton("📘 FACEBOOK", callback_data="svc_Facebook"),
         types.InlineKeyboardButton("📸 INSTAGRAM", callback_data="svc_Instagram"),
         types.InlineKeyboardButton("💬 WHATSAPP", callback_data="svc_WhatsApp")
     )
-    bot.send_message(message.chat.id, "🛠 সার্ভিস সিলেক্ট করুন (সব দেশ লাইভ):", reply_markup=mk)
+    bot.send_message(message.chat.id, "🛠 **সার্ভিস সিলেক্ট করুন (সব দেশ লাইভ):**", parse_mode="Markdown", reply_markup=mk)
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
-    # সার্ভিস রেঞ্জ লোড করা (Sync Mode 1-5)
+    # এপিআই থেকে সিঙ্ক মোডে টপ ৫টি রেঞ্জ বের করা
     if call.data.startswith("svc_"):
         svc = call.data.split("_")[1]
         try:
@@ -124,43 +110,46 @@ def callback_handler(call):
                             c_code = detect_country(r)
                             if c_code: sync_list.append((c_code, r))
                 
-                # প্রথম ৫টি টপ রেঞ্জ
+                # আপনার রিকোয়েস্ট অনুযায়ী প্রথম ৫টি দেশ (Sync Mode)
                 top_5 = sync_list[:5]
                 for code, rid in top_5:
                     c = COUNTRY_DATA[code]
                     clean_rid = rid.replace("XXX", "")
-                    mk.add(types.InlineKeyboardButton(f"⚡ {c['flag']} {c['name']} (Traffic Range)", callback_data=f"buy_{svc}_{clean_rid}"))
+                    mk.add(types.InlineKeyboardButton(f"⚡ {c['flag']} {c['name']} (SYNC RANGE: {clean_rid})", callback_data=f"buy_{svc}_{clean_rid}"))
                 
-                bot.edit_message_text(f"🚀 *SYNC MODE:* Top 5 {svc} Active Ranges:", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+                if not top_5:
+                    bot.send_message(call.message.chat.id, "❌ No Active Ranges Found.")
+                else:
+                    bot.edit_message_text(f"🚀 *SYNC MODE:* Top 5 {svc} Ranges:", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
         except: pass
 
     # নম্বর বাই এবং নম্বর চেঞ্জ লজিক
     elif call.data.startswith("buy_"):
         _, svc, rid = call.data.split("_")
-        bot.answer_callback_query(call.id, "Allocating Fast Number...")
+        bot.answer_callback_query(call.id, "Allocating Number...")
         
         try:
             order = session.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=get_headers()).json()
             if order['meta']['code'] == 200:
                 num = order['data']['full_number']
                 
-                # নম্বর চেঞ্জ এবং গ্রুপ জয়েন বাটন
+                # নম্বর চেঞ্জ এবং গ্রুপ জয়েন বাটন (নম্বরের নিচেই থাকবে)
                 mk = types.InlineKeyboardMarkup(row_width=1)
                 mk.add(
                     types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"buy_{svc}_{rid}"),
                     types.InlineKeyboardButton("📢 JOIN OTP GROUP", url=GROUP_LINK)
                 )
                 
-                bot.edit_message_text(f"✅ *Number Allocated*\n━━━━━━━━━━━━━━━━━━━━\n"
+                bot.edit_message_text(f"✅ *Number Allocated (SYNC)*\n━━━━━━━━━━━━━━━━━━━━\n"
                                      f"📞 Number: `{num}`\n"
                                      f"🛠 Service: `{svc}`\n"
                                      f"🕒 Status: Waiting for OTP...\n━━━━━━━━━━━━━━━━━━━━\n"
-                                     f"💡 ওটিপি না আসলে Change এ ক্লিক করুন।", 
+                                     f"💡 ওটিপি না আসলে Change বাটনে ক্লিক করুন।", 
                                      call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
                 
                 Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
             else:
-                bot.send_message(call.message.chat.id, "❌ Error: Stock Empty or No Balance.")
+                bot.send_message(call.message.chat.id, f"❌ Error: {order['meta'].get('msg', 'Stock Empty')}")
         except: pass
 
 if __name__ == "__main__":
