@@ -76,7 +76,7 @@ def monitor_otp(chat_id, number, svc):
                 for item in res['data'].get('otps', []):
                     if str(item['number']) == str(number):
                         msg = item['message']
-                        # FB এবং Insta সহ সব সার্ভিসের জন্য ফুল মেসেজ যাবে
+                        # ফুল মেসেজ ইউজারের কাছে যাবে
                         final_text = f"✅ *{svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
                         
                         bot.send_message(chat_id, final_text, parse_mode="Markdown")
@@ -89,7 +89,12 @@ def monitor_otp(chat_id, number, svc):
 def start_handler(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("📞 Get Number", "💰 Balance")
-    bot.send_photo(message.chat.id, WELCOME_IMAGE, caption="👋 Hello!\n**Sync Mode** (FB & Instagram) এবং **Full Message OTP** চালু আছে।", reply_markup=markup)
+    welcome_text = "👋 Hello!\n**Sync Mode** (FB & Instagram) এবং **Full Message OTP** চালু আছে।"
+    try:
+        bot.send_photo(message.chat.id, WELCOME_IMAGE, caption=welcome_text, reply_markup=markup, parse_mode="Markdown")
+    except Exception:
+        # ছবি লিঙ্কে সমস্যা থাকলে শুধু মেসেজ পাঠাবে
+        bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.text == "📞 Get Number")
 def service_menu(message):
@@ -106,46 +111,53 @@ def query_handler(call):
     # FB এবং Instagram উভয়ের জন্য একই সিঙ্ক মোড লজিক
     if call.data.startswith("svc_"):
         svc = call.data.split("_")[1]
-        res = session.get(f"{BASE_URL}/liveaccess", headers=get_headers()).json()
-        if res.get('meta', {}).get('code') == 200:
-            mk = types.InlineKeyboardMarkup(row_width=1)
-            sync_list = []
-            for s in res['data']['services']:
-                if s['sid'].lower() == svc.lower():
-                    for r in s['ranges']:
-                        c_code = detect_country(r)
-                        if c_code: sync_list.append((c_code, r))
-            
-            top_ranges = sync_list[:10] 
-            for code, rid in top_ranges:
-                c = COUNTRY_DATA[code]
-                clean_rid = rid.replace("XXX", "")
-                mk.add(types.InlineKeyboardButton(f"⚡ {c['flag']} {c['name']} (Range: {clean_rid})", callback_data=f"buy_{svc}_{clean_rid}"))
-            
-            bot.edit_message_text(f"🚀 *SYNC MODE:* {svc} Available Ranges:", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+        try:
+            res = session.get(f"{BASE_URL}/liveaccess", headers=get_headers()).json()
+            if res.get('meta', {}).get('code') == 200:
+                mk = types.InlineKeyboardMarkup(row_width=1)
+                sync_list = []
+                for s in res['data']['services']:
+                    if s['sid'].lower() == svc.lower():
+                        for r in s['ranges']:
+                            c_code = detect_country(r)
+                            if c_code: sync_list.append((c_code, r))
+                
+                # ১০টি পর্যন্ত এভেইলএবল রেঞ্জ দেখাবে
+                top_ranges = sync_list[:10] 
+                for code, rid in top_ranges:
+                    c = COUNTRY_DATA[code]
+                    clean_rid = rid.replace("XXX", "")
+                    mk.add(types.InlineKeyboardButton(f"⚡ {c['flag']} {c['name']} (Range: {clean_rid})", callback_data=f"buy_{svc}_{clean_rid}"))
+                
+                bot.edit_message_text(f"🚀 *SYNC MODE:* {svc} Available Ranges:", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+        except Exception:
+            bot.answer_callback_query(call.id, "Error fetching ranges.")
 
     elif call.data.startswith("buy_"):
         _, svc, rid = call.data.split("_")
         bot.answer_callback_query(call.id, "Allocating Number...")
         
-        order = session.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=get_headers()).json()
-        if order.get('meta', {}).get('code') == 200:
-            num = order['data']['full_number']
-            
-            mk = types.InlineKeyboardMarkup()
-            mk.add(types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"buy_{svc}_{rid}"))
-            mk.add(types.InlineKeyboardButton("📢 JOIN GROUP", url=GROUP_LINK))
-            
-            bot.edit_message_text(f"✅ *Number Allocated*\n━━━━━━━━━━━━━━━━━━━━\n"
-                                 f"📞 Number: `{num}`\n"
-                                 f"🛠 Service: `{svc}`\n"
-                                 f"⏳ Status: Waiting for OTP...\n━━━━━━━━━━━━━━━━━━━━\n"
-                                 f"💡 ওটিপি না আসলে 'Change Number' ক্লিক করুন।", 
-                                 call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
-            
-            Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
-        else:
-            bot.send_message(call.message.chat.id, "❌ Error: Stock empty or No Balance for this range.")
+        try:
+            order = session.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=get_headers()).json()
+            if order.get('meta', {}).get('code') == 200:
+                num = order['data']['full_number']
+                
+                mk = types.InlineKeyboardMarkup()
+                mk.add(types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"buy_{svc}_{rid}"))
+                mk.add(types.InlineKeyboardButton("📢 JOIN GROUP", url=GROUP_LINK))
+                
+                bot.edit_message_text(f"✅ *Number Allocated*\n━━━━━━━━━━━━━━━━━━━━\n"
+                                     f"📞 Number: `{num}`\n"
+                                     f"🛠 Service: `{svc}`\n"
+                                     f"⏳ Status: Waiting for OTP...\n━━━━━━━━━━━━━━━━━━━━\n"
+                                     f"💡 ওটিপি না আসলে 'Change Number' ক্লিক করুন।", 
+                                     call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+                
+                Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
+            else:
+                bot.send_message(call.message.chat.id, "❌ Error: Stock empty or No Balance for this range.")
+        except Exception:
+            bot.send_message(call.message.chat.id, "❌ Service Currently Unavailable.")
 
 if __name__ == "__main__":
     keep_alive()
