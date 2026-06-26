@@ -8,7 +8,7 @@ from waitress import serve
 
 # --- কনফিগারেশন ---
 BOT_TOKEN = '8953289994:AAEAO-JUoARj2RJRkOoi7BHuXqbHwjfvahw'
-API_KEY = 'MSVB8RMSMQK'
+API_KEY = 'MQGVM5B5OOW'
 BASE_URL = 'https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api'
 
 # ওটিপি গ্রুপ ও লিঙ্ক
