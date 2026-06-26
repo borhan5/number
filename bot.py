@@ -4,7 +4,7 @@ from flask import Flask
 from threading import Thread
 
 # --- CONFIGURATION ---
-API_TOKEN = "8953289994:AAFNySB7QBvzsYz4k_EntbwB_cwWf0QE21E"
+API_TOKEN = "8953289994:AAEpzTRZtGS-K3MBrVC2sT05r5sTb_n7mu8"
 VOLTX_KEY = "MQGVM5B5OOW"
 GROUP_ID = -1003968881110 
 GROUP_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
