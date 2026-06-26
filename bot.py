@@ -1,186 +1,185 @@
-import os
-import asyncio
-import logging
+import telebot
 import requests
-import re
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils import executor
+import time
+import threading
 from flask import Flask
-from threading import Thread
+from telebot import types
+from waitress import serve
 
-# --- RENDER WEB SERVER (For 24/7 Hosting) ---
-app = Flask('')
-@app.route('/')
-def home():
-    return "VOLTX Bot is Live!"
-
-def run_web():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
-
-# --- BOT CONFIGURATION ---
-API_TOKEN = '8953289994:AAHalks0v_QNWta40jorqobnfwS1trW8pJQ' 
-PANEL_API_KEY = 'MSVB8RMSMQK' 
-OTP_GROUP_ID = -1003968881110 
+# --- কনফিগারেশন ---
+BOT_TOKEN = '8942060883:AAH6VqwhkD4_FILqIQzrvluwhboPJY_R9qg'
+API_KEY = 'MSVB8RMSMQK'
 BASE_URL = 'https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api'
 
-logging.basicConfig(level=logging.INFO)
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
-headers = {'mauthapi': PANEL_API_KEY}
+# ওটিপি গ্রুপ ও লিঙ্ক
+GROUP_ID = -1003968881110 
+GROUP_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 
-# --- EXTENSIVE COUNTRY FLAG MAP ---
-COUNTRY_FLAGS = {
-    "Afghanistan": "🇦🇫", "Albania": "🇦🇱", "Algeria": "🇩🇿", "Andorra": "🇦🇩", "Angola": "🇦🇴", "Argentina": "🇦🇷",
-    "Armenia": "🇦🇲", "Australia": "🇦🇺", "Austria": "🇦🇹", "Azerbaijan": "🇦🇿", "Bahamas": "🇧🇸", "Bahrain": "🇧🇭",
-    "Bangladesh": "🇧🇩", "Barbados": "🇧🇧", "Belarus": "🇧🇾", "Belgium": "🇧🇪", "Belize": "🇧🇿", "Benin": "🇧🇯",
-    "Bhutan": "🇧🇹", "Bolivia": "🇧🇴", "Bosnia and Herzegovina": "🇧🇦", "Botswana": "🇧🇼", "Brazil": "🇧🇷", "Brunei": "🇧🇳",
-    "Bulgaria": "🇧🇬", "Burkina Faso": "🇧🇫", "Burundi": "🇧🇮", "Cambodia": "🇰🇭", "Cameroon": "🇨🇲", "Canada": "🇨🇦",
-    "Cape Verde": "🇨🇻", "Central African Republic": "🇨🇫", "Chad": "🇹🇩", "Chile": "🇨🇱", "China": "🇨🇳", "Colombia": "🇨🇴",
-    "Comoros": "🇰🇲", "Congo": "🇨🇬", "Costa Rica": "🇨🇷", "Croatia": "🇭🇷", "Cuba": "🇨🇺", "Cyprus": "🇨🇾", "Czech Republic": "🇨🇿",
-    "Denmark": "🇩🇰", "Djibouti": "🇩🇯", "Dominica": "🇩🇲", "Dominican Republic": "🇩🇴", "Ecuador": "🇪🇨", "Egypt": "🇪🇬",
-    "El Salvador": "🇸🇻", "Equatorial Guinea": "🇬🇶", "Eritrea": "🇪🇷", "Estonia": "🇪🇪", "Ethiopia": "🇪🇹", "Fiji": "🇫🇯",
-    "Finland": "🇫🇮", "France": "🇫🇷", "Gabon": "🇬🇦", "Gambia": "🇬🇲", "Georgia": "🇬🇪", "Germany": "🇩🇪", "Ghana": "🇬🇭",
-    "Greece": "🇬🇷", "Grenada": "🇬🇩", "Guatemala": "🇬🇹", "Guinea": "🇬🇳", "Guyana": "🇬🇾", "Haiti": "🇭🇹", "Honduras": "🇭🇳",
-    "Hungary": "🇭🇺", "Iceland": "🇮🇸", "India": "🇮🇳", "Indonesia": "🇮🇩", "Iran": "🇮🇷", "Iraq": "🇮🇶", "Ireland": "🇮🇪",
-    "Israel": "🇮🇱", "Italy": "🇮🇹", "Ivory Coast": "🇨🇮", "Jamaica": "🇯🇲", "Japan": "🇯🇵", "Jordan": "🇯🇴", "Kazakhstan": "🇰🇿",
-    "Kenya": "🇰🇪", "Kiribati": "🇰🇮", "Kuwait": "🇰🇼", "Kyrgyzstan": "🇰🇬", "Laos": "🇱🇦", "Latvia": "🇱🇻", "Lebanon": "🇱🇧",
-    "Lesotho": "🇱🇸", "Liberia": "🇱🇷", "Libya": "🇱🇾", "Liechtenstein": "🇱🇮", "Lithuania": "🇱🇹", "Luxembourg": "🇱🇺",
-    "Madagascar": "🇲🇬", "Malawi": "🇲🇼", "Malaysia": "🇲🇾", "Maldives": "🇲🇻", "Mali": "🇲🇱", "Malta": "🇲🇹", "Mauritania": "🇲🇷",
-    "Mauritius": "🇲🇺", "Mexico": "🇲🇽", "Moldova": "🇲🇩", "Monaco": "🇲🇨", "Mongolia": "🇲🇳", "Montenegro": "🇲🇪",
-    "Morocco": "🇲🇦", "Mozambique": "🇲🇿", "Myanmar": "🇲🇲", "Namibia": "🇳🇦", "Nauru": "🇳🇷", "Nepal": "🇳🇵", "Netherlands": "🇳🇱",
-    "New Zealand": "🇳🇿", "Nicaragua": "🇳🇮", "Niger": "🇳🇪", "Nigeria": "🇳🇬", "North Korea": "🇰🇵", "Norway": "🇳🇴",
-    "Oman": "🇴🇲", "Pakistan": "🇵🇰", "Palau": "🇵🇼", "Palestine": "🇵🇸", "Panama": "🇵🇦", "Papua New Guinea": "🇵🇬",
-    "Paraguay": "🇵🇾", "Peru": "🇵🇪", "Philippines": "🇵🇭", "Poland": "🇵🇱", "Portugal": "🇵🇹", "Qatar": "🇶🇦", "Romania": "🇷🇴",
-    "Russia": "🇷🇺", "Rwanda": "🇷🇼", "Saudi Arabia": "🇸🇦", "Senegal": "🇸🇳", "Serbia": "🇷🇸", "Seychelles": "🇸🇨",
-    "Sierra Leone": "🇸🇱", "Singapore": "🇸🇬", "Slovakia": "🇸🇰", "Slovenia": "🇸🇮", "Solomon Islands": "🇸🇧", "Somalia": "🇸🇴",
-    "South Africa": "🇿🇦", "South Korea": "🇰🇷", "South Sudan": "🇸🇸", "Spain": "🇪🇸", "Sri Lanka": "🇱🇰", "Sudan": "🇸🇩",
-    "Suriname": "🇸🇷", "Swaziland": "🇸🇿", "Sweden": "🇸🇪", "Switzerland": "🇨🇭", "Syria": "🇸🇾", "Taiwan": "🇹🇼",
-    "Tajikistan": "🇹🇯", "Tanzania": "🇹🇿", "Thailand": "🇹🇭", "Togo": "🇹🇬", "Tonga": "🇹🇴", "Trinidad and Tobago": "🇹🇹",
-    "Tunisia": "🇹🇳", "Turkey": "🇹🇷", "Turkmenistan": "🇹🇲", "Tuvalu": "🇹🇻", "Uganda": "🇺🇬", "Ukraine": "🇺🇦",
-    "United Arab Emirates": "🇦🇪", "United Kingdom": "🇬🇧", "USA": "🇺🇸", "Uruguay": "🇺🇾", "Uzbekistan": "🇺🇿",
-    "Vanuatu": "🇻🇺", "Venezuela": "🇻🇪", "Vietnam": "🇻🇳", "Yemen": "🇾🇪", "Zambia": "🇿🇲", "Zimbabwe": "🇿🇼"
-}
+bot = telebot.TeleBot(BOT_TOKEN)
+HEADERS = {'mauthapi': API_KEY, 'Content-Type': 'application/json'}
 
-# --- HELPER FUNCTIONS ---
+# --- কান্ট্রি ফ্ল্যাগ হেল্পার ---
+def get_flag(country_name):
+    flags = {
+        "Benin": "🇧🇯", "Ivory Coast": "🇨🇮", "Guinea": "🇬🇳", 
+        "Central African Rep.": "🇨🇫", "United Kingdom": "🇬🇧", 
+        "Bangladesh": "🇧🇩", "USA": "🇺🇸", "India": "🇮🇳", "Vietnam": "🇻🇳"
+    }
+    return flags.get(country_name, "🌍")
 
-def get_live_ranges(service_name):
-    try:
-        response = requests.get(f"{BASE_URL}/liveaccess", headers=headers)
-        data = response.json()
-        if data['meta']['code'] == 200:
-            for s in data['data']['services']:
-                if s['sid'].lower() == service_name.lower():
-                    return s['ranges']
-        return []
-    except:
-        return []
+# --- ওয়েব সার্ভার (বট সচল রাখতে) ---
+app = Flask('')
+@app.route('/')
+def home(): return "Borhan OTP Bot is Running"
+def run_web_server(): serve(app, host='0.0.0.0', port=8080)
 
-def mask_number(num):
-    s = str(num)
-    # Masks 3 digits in the middle (e.g., 447404333228 -> 4474***33228)
-    if len(s) > 6:
-        return f"{s[:4]}***{s[7:]}"
-    return s
-
-async def check_otp_loop(msg_obj, number, service):
-    # Check every 5 seconds for up to 5 minutes
-    for _ in range(60):
-        await asyncio.sleep(5)
-        try:
-            res = requests.get(f"{BASE_URL}/success-otp", headers=headers)
-            otp_data = res.json()
-            if otp_data['meta']['code'] == 200:
-                for item in otp_data['data']['otps']:
-                    if str(item['number']) == str(number):
-                        raw_msg = item['message']
-                        
-                        # Extract only digits for Facebook codes
-                        if service == "Facebook":
-                            otp_code = "".join(re.findall(r'\d+', raw_msg))
-                        else:
-                            otp_code = raw_msg
-                        
-                        await msg_obj.edit_text(f"✅ **OTP SUCCESS**\n\nNumber: `+{number}`\nCode: `{otp_code}`", parse_mode="Markdown")
-                        
-                        # Forward to Group with Masked Number
-                        masked = mask_number(number)
-                        group_text = (f"🔔 **NEW OTP ALERT**\n"
-                                     f"Service: {service}\n"
-                                     f"Number: +{masked}\n"
-                                     f"OTP Code: `{otp_code}`")
-                        await bot.send_message(OTP_GROUP_ID, group_text, parse_mode="Markdown")
-                        return
-        except:
-            pass
-
-# --- BOT HANDLERS ---
-
-@dp.message_handler(commands=['start'])
-async def welcome(message: types.Message):
-    kb = InlineKeyboardMarkup().add(InlineKeyboardButton("📞 Get Number", callback_data="main"))
-    await message.answer("✨ **Welcome to VOLTX SMS**\nGet fast OTPs for global services.", reply_markup=kb, parse_mode="Markdown")
-
-@dp.callback_query_handler(lambda c: c.data == "main")
-async def show_services(cb: types.CallbackQuery):
-    kb = InlineKeyboardMarkup(row_width=2)
-    kb.add(
-        InlineKeyboardButton("📘 Facebook", callback_data="srv_Facebook"),
-        InlineKeyboardButton("📸 Instagram", callback_data="srv_Instagram"),
-        InlineKeyboardButton("🟢 WhatsApp", callback_data="srv_WhatsApp")
+# --- মেইন মেনু ---
+def main_menu():
+    markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    markup.add(
+        types.KeyboardButton("📞 Get Number"), types.KeyboardButton("💰 Balance"),
+        types.KeyboardButton("🖥️ Console"), types.KeyboardButton("📊 Stats")
     )
-    await bot.edit_message_text("💎 **Select Service:**", cb.from_user.id, cb.message.message_id, reply_markup=kb, parse_mode="Markdown")
+    return markup
 
-@dp.callback_query_handler(lambda c: c.data.startswith("srv_"))
-async def display_ranges(cb: types.CallbackQuery):
-    service = cb.data.split('_')[1]
-    ranges = get_live_ranges(service)
-    
-    if not ranges:
-        await cb.answer("No live ranges available right now.", show_alert=True)
-        return
+# --- ওটিপি চেক ফাংশন ---
+def poll_otp(chat_id, num, user_name, service_name):
+    start_time = time.time()
+    while time.time() - start_time < 600:
+        try:
+            r = requests.get(f"{BASE_URL}/success-otp", headers=HEADERS, timeout=10).json()
+            if r['meta']['code'] == 200:
+                for o in r['data'].get('otps', []):
+                    if str(o['number']) == str(num):
+                        otp_msg = (
+                            f"⚡️ **Borhan OTP Received!**\n"
+                            f"━━━━━━━━━━━━━━\n"
+                            f"📱 Number: `{num}`\n"
+                            f"🔑 Code: `{o['message']}`\n"
+                            f"━━━━━━━━━━━━━━"
+                        )
+                        bot.send_message(chat_id, otp_msg, parse_mode="Markdown")
+                        
+                        # গ্রুপে লগ
+                        group_log = (
+                            f"📢 **Borhan OTP Success**\n"
+                            f"━━━━━━━━━━━━━━\n"
+                            f"📱 Number: `{num[:6]}***{num[-2:]}`\n"
+                            f"🔑 Code: `{o['message']}`\n"
+                            f"🌐 Service: {service_name}\n"
+                            f"👤 User: {user_name}\n"
+                            f"━━━━━━━━━━━━━━"
+                        )
+                        bot.send_message(GROUP_ID, group_log, parse_mode="Markdown")
+                        return
+        except: pass
+        time.sleep(10)
 
-    kb = InlineKeyboardMarkup(row_width=2)
-    for r in ranges[:12]:
-        rid = r.replace('XXX', '')
-        kb.add(InlineKeyboardButton(f"📡 Range {r}", callback_data=f"buy_{service}_{rid}"))
-    kb.add(InlineKeyboardButton("🔙 Back", callback_data="main"))
-    
-    await bot.edit_message_text(f"Select a live range for **{service}**:", cb.from_user.id, cb.message.message_id, reply_markup=kb, parse_mode="Markdown")
+# --- কমান্ড হ্যান্ডলার ---
+@bot.message_handler(commands=['start'])
+def start(message):
+    welcome = (
+        f"🤖 **Welcome to Borhan OTP!**\n\n"
+        f"Hello {message.from_user.first_name}, বোরহান ওটিপি সার্ভিস থেকে "
+        f"আপনার পছন্দের সার্ভিসটি বেছে নিন।"
+    )
+    bot.send_message(message.chat.id, welcome, reply_markup=main_menu(), parse_mode="Markdown")
 
-@dp.callback_query_handler(lambda c: c.data.startswith("buy_"))
-async def buy_process(cb: types.CallbackQuery):
-    _, service, rid = cb.data.split('_')
-    
-    # Post request to allocate number
-    res = requests.post(f"{BASE_URL}/getnum", headers=headers, json={"rid": rid}).json()
-    
-    if res['meta']['code'] == 200:
-        data = res['data']
-        num = data['no_plus_number']
-        country = data['country']
-        flag = COUNTRY_FLAGS.get(country, "🏳️") # Default to white flag if unknown
-        
-        msg_body = (f"✅ **Number Ready**\n\n"
-                   f"🌍 Country: {flag} {country}\n"
-                   f"🔢 Number: `+{num}`\n"
-                   f"🏷 Service: {service}\n\n"
-                   f"⏳ Waiting for OTP code...")
-        
-        kb = InlineKeyboardMarkup(row_width=2)
-        kb.add(
-            InlineKeyboardButton("🔄 Change Number", callback_data=f"buy_{service}_{rid}"),
-            InlineKeyboardButton("🌍 Change Country", callback_data="main")
-        )
-        
-        sent = await bot.edit_message_text(msg_body, cb.from_user.id, cb.message.message_id, reply_markup=kb, parse_mode="Markdown")
-        
-        # Start checking for OTP in background
-        asyncio.create_task(check_otp_loop(sent, num, service))
-    else:
-        await cb.answer("❌ Out of stock! Try another range.", show_alert=True)
+@bot.message_handler(func=lambda m: m.text == "📞 Get Number")
+def choose_service(m):
+    bot.send_chat_action(m.chat.id, 'typing')
+    try:
+        res = requests.get(f"{BASE_URL}/liveaccess", headers=HEADERS).json()
+        if res['meta']['code'] == 200:
+            # প্যানেলের প্রথম ৪টি সার্ভিস ফিল্টার করা হচ্ছে
+            services = res['data']['services'][:4]
+            markup = types.InlineKeyboardMarkup(row_width=1)
+            
+            for s in services:
+                markup.add(types.InlineKeyboardButton(f"📲 {s['sid']}", callback_data=f"ser_{s['sid']}"))
+            
+            bot.send_message(m.chat.id, "💎 **প্রথম ৪টি মেইন সার্ভিস (Full Traffic):**", reply_markup=markup, parse_mode="Markdown")
+    except:
+        bot.send_message(m.chat.id, "❌ সার্ভার সমস্যা। আবার চেষ্টা করুন।")
 
-if __name__ == '__main__':
-    Thread(target=run_web).start() 
-    executor.start_polling(dp, skip_updates=True)
+@bot.callback_query_handler(func=lambda call: call.data.startswith("ser_"))
+def show_ranges(call):
+    sid = call.data.split("_")[1]
+    res = requests.get(f"{BASE_URL}/liveaccess", headers=HEADERS).json()
+    services = res['data']['services']
+    selected = next((item for item in services if item['sid'] == sid), None)
+    
+    if selected:
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        for r in selected['ranges']:
+            rid = r.replace("XXX", "")
+            markup.add(types.InlineKeyboardButton(f"🌍 Range: {r}", callback_data=f"buy_{sid}_{rid}"))
+        
+        bot.edit_message_text(f"📍 **Service: {sid}**\nএকটি রেঞ্জ সিলেক্ট করুন:", call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith(("buy_", "change_")))
+def buy_process(call):
+    data = call.data.split("_")
+    sid, rid = data[1], data[2]
+    user_name = call.from_user.first_name
+    
+    bot.edit_message_text(f"⏳ **{sid} এর নাম্বার চেক হচ্ছে...**", call.message.chat.id, call.message.message_id)
+    
+    try:
+        res = requests.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=HEADERS).json()
+        if res['meta']['code'] == 200:
+            num_data = res['data']
+            full_num = num_data['full_number']
+            clean_num = num_data['no_plus_number']
+            country = num_data['country']
+            flag = get_flag(country)
+            
+            markup = types.InlineKeyboardMarkup(row_width=2)
+            markup.add(
+                types.InlineKeyboardButton("🔄 Change Number", callback_data=f"change_{sid}_{rid}"),
+                types.InlineKeyboardButton("🌍 Change Country", callback_data=f"ser_{sid}")
+            )
+            markup.add(types.InlineKeyboardButton("📢 Join OTP Group", url=GROUP_LINK))
+            
+            response_text = (
+                f"✅ **নাম্বার পাওয়া গেছে!**\n\n"
+                f"━━━━━━━━━━━━━━\n"
+                f"{flag} **Country:** {country}\n"
+                f"📱 **Number:** `{full_num}`\n"
+                f"🧩 **Service:** {sid}\n"
+                f"━━━━━━━━━━━━━━\n"
+                f"⏳ **ওটিপির জন্য অপেক্ষা করুন...**"
+            )
+            bot.edit_message_text(response_text, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
+            
+            threading.Thread(target=poll_otp, args=(call.message.chat.id, clean_num, user_name, sid)).start()
+        else:
+            bot.edit_message_text(f"❌ **Stock Out:** {res['message']}", call.message.chat.id, call.message.message_id)
+    except:
+        bot.send_message(call.message.chat.id, "❌ কানেকশন এরর।")
+
+@bot.message_handler(func=lambda m: m.text == "💰 Balance")
+def check_balance(m):
+    bot.reply_to(m, "💳 **Account Balance:**\nব্যালেন্স রিফিলের জন্য অ্যাডমিনের সাথে যোগাযোগ করুন।")
+
+@bot.message_handler(func=lambda m: m.text == "🖥️ Console")
+def show_console(m):
+    try:
+        res = requests.get(f"{BASE_URL}/console", headers=HEADERS).json()
+        if res['meta']['code'] == 200:
+            hits = res['data'].get('hits', [])
+            text = "🖥️ **Borhan OTP Live Hits:**\n\n"
+            for h in hits[:5]:
+                text += f"🔹 {h['sid']} | `{h['range']}` | ✅ Hit\n"
+            bot.send_message(m.chat.id, text, parse_mode="Markdown")
+    except: pass
+
+# --- বট স্টার্ট ---
+if __name__ == "__main__":
+    threading.Thread(target=run_web_server).start()
+    print("Borhan OTP Pro is Starting...")
+    while True:
+        try:
+            bot.polling(none_stop=True, timeout=60)
+        except:
+            time.sleep(10)
