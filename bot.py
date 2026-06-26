@@ -9,6 +9,8 @@ VOLTX_KEY = "MQGVM5B5OOW"
 GROUP_ID = -1003968881110 
 GROUP_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
+# স্টার্ট মেনুর ছবির লিঙ্ক (আপনার কোনো পছন্দ থাকলে লিঙ্ক পাল্টে নিতে পারেন)
+WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg" 
 
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
@@ -119,13 +121,12 @@ bot = telebot.TeleBot(API_TOKEN)
 app = Flask('')
 
 @app.route('/')
-def home(): return "VOLTX PRO ACTIVE"
+def home(): return "BSNUMBER ACTIVE"
 def run(): app.run(host='0.0.0.0', port=8080)
 def keep_alive(): Thread(target=run).start()
 
 def get_headers(): return {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# নম্বর থেকে কান্ট্রি কোড বের করার স্মার্ট ফাংশন
 def detect_country(prefix_full):
     for length in [3, 2, 1]:
         p = prefix_full[:length]
@@ -142,39 +143,61 @@ def monitor_otp(chat_id, number, svc):
                 for item in res['data']['otps']:
                     if item['number'] == number:
                         otp = re.findall(r'\b\d{4,6}\b', item['message'])[0] if re.findall(r'\b\d{4,6}\b', item['message']) else "Received"
-                        bot.send_message(chat_id, f"✅ *{svc} OTP RECEIVED!*\n\n📱 Number: `{number}`\n🔢 OTP: `{otp}`\n\n💬 Message: `{item['message']}`", parse_mode="Markdown")
+                        bot.send_message(chat_id, f"✅ *{svc} OTP RECEIVED!*\n\n📱 Number: `{number}`\n🔢 OTP: `{otp}`\n\n💬 Msg: `{item['message']}`", parse_mode="Markdown")
                         bot.send_message(GROUP_ID, f"🔔 *New OTP Log*\nService: {svc}\nNumber: `{number[:7]}***` \nOTP: `{otp}`", parse_mode="Markdown")
                         return
         except: pass
         time.sleep(5)
 
-@bot.message_handler(commands=['start', 'get_number'])
+@bot.message_handler(commands=['start'])
 def start_handler(message):
-    bot.set_my_commands([
-        telebot.types.BotCommand("start", "🏠 Main Menu"),
-        telebot.types.BotCommand("get_number", "📱 Get New Number")
-    ])
-    mk = types.InlineKeyboardMarkup(row_width=1) # বড় বাটনের জন্য row_width=1
-    mk.add(types.InlineKeyboardButton("🚀 START GETTING NUMBER", callback_data="main_menu"))
-    bot.send_message(message.chat.id, "💎 *VOLTX PROFESSIONAL AUTO CONSOLE*\n━━━━━━━━━━━━━━━━━━━━\nসব দেশের ফুল ট্রাফিক এবং ফাস্ট ওটিপি নাম্বার নিতে নিচে ক্লিক করুন।", parse_mode="Markdown", reply_markup=mk)
+    name = message.from_user.first_name
+    # মেইন রিপ্লাই কিবোর্ড (স্ক্রিনশটের মতো)
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    markup.add(
+        types.KeyboardButton("📞 Get Number"), types.KeyboardButton("📦 Stock Number"),
+        types.KeyboardButton("🔐 Get 2FA"), types.KeyboardButton("Extract OTP"),
+        types.KeyboardButton("📊 Stats"), types.KeyboardButton("💰 Balance")
+    )
+    
+    welcome_text = f"🤖 *BSNUMBER* | 👋 Hello, {name}!\n✅ Select a service from the buttons below:"
+    
+    try:
+        bot.send_photo(message.chat.id, WELCOME_IMAGE, caption=welcome_text, parse_mode="Markdown", reply_markup=markup)
+    except:
+        bot.send_message(message.chat.id, welcome_text, parse_mode="Markdown", reply_markup=markup)
 
-@bot.callback_query_handler(func=lambda call: True)
-def query_handler(call):
-    if call.data == "main_menu":
+@bot.message_handler(func=lambda message: True)
+def handle_reply_buttons(message):
+    chat_id = message.chat.id
+    text = message.text
+
+    if "📞 Get Number" in text:
         mk = types.InlineKeyboardMarkup(row_width=1)
         mk.add(
             types.InlineKeyboardButton("📘 FACEBOOK", callback_data="svc_Facebook"),
             types.InlineKeyboardButton("📸 INSTAGRAM", callback_data="svc_Instagram"),
             types.InlineKeyboardButton("💬 WHATSAPP", callback_data="svc_WhatsApp")
         )
-        bot.edit_message_text("🛠 *সার্ভিস সিলেক্ট করুন:*", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+        bot.send_message(chat_id, "🛠 *সার্ভিস সিলেক্ট করুন (All Countries Available):*", parse_mode="Markdown", reply_markup=mk)
 
-    elif call.data.startswith("svc_"):
+    elif "💰 Balance" in text:
+        bot.send_message(chat_id, "💳 Your current balance is tracked in the main console.")
+    
+    elif "📊 Stats" in text:
+        bot.send_message(chat_id, "📈 System is running at 100% efficiency.")
+    
+    else:
+        bot.send_message(chat_id, f"⚠️ '{text}' functionality will be added soon.")
+
+@bot.callback_query_handler(func=lambda call: True)
+def query_handler(call):
+    if call.data.startswith("svc_"):
         svc = call.data.split("_")[1]
-        bot.answer_callback_query(call.id, f"Filtering Live Console for {svc}...")
+        bot.answer_callback_query(call.id, f"Fetching All Countries for {svc}...")
         
         res = requests.get(f"{BASE_URL}/liveaccess", headers=get_headers()).json()
-        traffic_counts = {}
+        traffic_map = {}
         
         if res.get('meta', {}).get('code') == 200:
             for s in res['data']['services']:
@@ -182,22 +205,21 @@ def query_handler(call):
                     for r in s['ranges']:
                         c_code = detect_country(r)
                         if c_code:
-                            traffic_counts[c_code] = traffic_counts.get(c_code, 0) + 1
+                            traffic_map[c_code] = traffic_map.get(c_code, 0) + 1
         
-        # ট্রাফিক অনুযায়ী সর্টিং এবং সেরা ৫টি নেওয়া
-        sorted_c = sorted(traffic_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        # সব দেশ দেখাবে (ট্রাফিক অনুযায়ী সাজানো)
+        sorted_countries = sorted(traffic_map.items(), key=lambda x: x[1], reverse=True)
         
         mk = types.InlineKeyboardMarkup(row_width=1)
-        for code, count in sorted_c:
+        for code, count in sorted_countries:
             info = COUNTRY_DATA[code]
             mk.add(types.InlineKeyboardButton(f"{info['flag']} {info['name']} (FULL TRAFFIC)", callback_data=f"buy_{svc}_{code}"))
         
-        if not sorted_c:
+        if not sorted_countries:
             bot.send_message(call.message.chat.id, "❌ বর্তমানে কোনো ট্রাফিক পাওয়া যায়নি।")
             return
             
-        mk.add(types.InlineKeyboardButton("🔙 BACK", callback_data="main_menu"))
-        bot.edit_message_text(f"🔥 *{svc} Full Traffic Countries:*\n(সবচেয়ে সচল দেশগুলো ১ নাম্বারে রাখা হয়েছে)", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+        bot.edit_message_text(f"🌍 *{svc} Available Countries:*\n(সব দেশ এখানে দেওয়া হয়েছে)", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
 
     elif call.data.startswith("buy_"):
         _, svc, code = call.data.split("_")
