@@ -1,28 +1,19 @@
-import telebot
-import requests
-import time
-import threading
+import asyncio
+import logging
+import httpx
 import re
-from flask import Flask
-from telebot import types
-from waitress import serve
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.filters import Command
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 
 # --- CONFIGURATION ---
-BOT_TOKEN = 'BOT_TOKEN = '8953289994:AAF_s1M9_kcPufc4bmo_FIOcTdiL3YzxNtA' 
-API_KEY = 'MQGVM5B5OOW'
-BASE_URL = 'https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api'
+API_TOKEN = "8953289994:AAEB7g1t1uu4iIv0Opv6ZT7yy9_jZ-K8qZg"
+PANEL_API_KEY = "MQGVM5B5OOW"
+GROUP_ID = -1003968881110  # Standard Telegram groups start with -100
+BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
 
-GROUP_ID = -1003968881110 
-GROUP_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
-DEV_LINK = "https://t.me/BORHANSB"
-
-bot = telebot.TeleBot(BOT_TOKEN)
-HEADERS = {'mauthapi': API_KEY, 'Content-Type': 'application/json'}
-
-# Session tracking for Cancel/Change logic
-active_sessions = {} 
-
-# --- ULTIMATE GLOBAL COUNTRY DATABASE (200+ Countries) ---
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -52,260 +43,173 @@ COUNTRY_DATA = {
     "265": {"name": "Malawi", "flag": "🇲🇼"}, "266": {"name": "Lesotho", "flag": "🇱🇸"},
     "267": {"name": "Botswana", "flag": "🇧🇼"}, "268": {"name": "Eswatini", "flag": "🇸🇿"},
     "269": {"name": "Comoros", "flag": "🇰🇲"}, "27": {"name": "South Africa", "flag": "🇿🇦"},
-    "290": {"name": "Saint Helena", "flag": "🇸🇭"}, "291": {"name": "Eritrea", "flag": "🇪🇷"},
-    "297": {"name": "Aruba", "flag": "🇦🇼"}, "298": {"name": "Faroe Islands", "flag": "🇫🇴"},
-    "299": {"name": "Greenland", "flag": "🇬🇱"}, "30": {"name": "Greece", "flag": "🇬🇷"},
-    "31": {"name": "Netherlands", "flag": "🇳🇱"}, "32": {"name": "Belgium", "flag": "🇧🇪"},
-    "33": {"name": "France", "flag": "🇫🇷"}, "34": {"name": "Spain", "flag": "🇪🇸"},
-    "350": {"name": "Gibraltar", "flag": "🇬🇮"}, "351": {"name": "Portugal", "flag": "🇵🇹"},
-    "352": {"name": "Luxembourg", "flag": "🇱🇺"}, "353": {"name": "Ireland", "flag": "🇮🇪"},
-    "354": {"name": "Iceland", "flag": "🇮🇸"}, "355": {"name": "Albania", "flag": "🇦🇱"},
-    "356": {"name": "Malta", "flag": "🇲🇹"}, "357": {"name": "Cyprus", "flag": "🇨🇾"},
-    "358": {"name": "Finland", "flag": "🇫🇮"}, "359": {"name": "Bulgaria", "flag": "🇧🇬"},
-    "36": {"name": "Hungary", "flag": "🇭🇺"}, "370": {"name": "Lithuania", "flag": "🇱🇹"},
-    "371": {"name": "Latvia", "flag": "🇱🇻"}, "372": {"name": "Estonia", "flag": "🇪🇪"},
-    "373": {"name": "Moldova", "flag": "🇲🇩"}, "374": {"name": "Armenia", "flag": "🇦🇲"},
-    "375": {"name": "Belarus", "flag": "🇧🇾"}, "376": {"name": "Andorra", "flag": "🇦🇩"},
-    "377": {"name": "Monaco", "flag": "🇲🇨"}, "378": {"name": "San Marino", "flag": "🇸🇲"},
-    "380": {"name": "Ukraine", "flag": "🇺🇦"}, "381": {"name": "Serbia", "flag": "🇷🇸"},
-    "382": {"name": "Montenegro", "flag": "🇲🇪"}, "383": {"name": "Kosovo", "flag": "🇽🇰"},
-    "385": {"name": "Croatia", "flag": "🇭🇷"}, "386": {"name": "Slovenia", "flag": "🇸🇮"},
-    "387": {"name": "Bosnia", "flag": "🇧🇦"}, "389": {"name": "Macedonia", "flag": "🇲🇰"},
-    "39": {"name": "Italy", "flag": "🇮🇹"}, "40": {"name": "Romania", "flag": "🇷🇴"},
-    "41": {"name": "Switzerland", "flag": "🇨🇭"}, "420": {"name": "Czech Rep.", "flag": "🇨🇿"},
-    "421": {"name": "Slovakia", "flag": "🇸🇰"}, "423": {"name": "Liechtenstein", "flag": "🇱🇮"},
-    "43": {"name": "Austria", "flag": "🇦🇹"}, "44": {"name": "UK", "flag": "🇬🇧"},
-    "45": {"name": "Denmark", "flag": "🇩🇰"}, "46": {"name": "Sweden", "flag": "🇸🇪"},
-    "47": {"name": "Norway", "flag": "🇳🇴"}, "48": {"name": "Poland", "flag": "🇵🇱"},
-    "49": {"name": "Germany", "flag": "🇩🇪"}, "500": {"name": "Falkland Isl.", "flag": "🇫🇰"},
-    "501": {"name": "Belize", "flag": "🇧🇿"}, "502": {"name": "Guatemala", "flag": "🇬🇹"},
-    "503": {"name": "El Salvador", "flag": "🇸🇻"}, "504": {"name": "Honduras", "flag": "🇭🇳"},
-    "505": {"name": "Nicaragua", "flag": "🇳🇮"}, "506": {"name": "Costa Rica", "flag": "🇨🇷"},
-    "507": {"name": "Panama", "flag": "🇵🇦"}, "508": {"name": "St. Pierre", "flag": "🇵🇲"},
-    "509": {"name": "Haiti", "flag": "🇭🇹"}, "51": {"name": "Peru", "flag": "🇵🇪"},
-    "52": {"name": "Mexico", "flag": "🇲🇽"}, "53": {"name": "Cuba", "flag": "🇨🇺"},
-    "54": {"name": "Argentina", "flag": "🇦🇷"}, "55": {"name": "Brazil", "flag": "🇧🇷"},
-    "56": {"name": "Chile", "flag": "🇨🇱"}, "57": {"name": "Colombia", "flag": "🇨🇴"},
-    "58": {"name": "Venezuela", "flag": "🇻🇪"}, "590": {"name": "Guadeloupe", "flag": "🇬🇵"},
-    "591": {"name": "Bolivia", "flag": "🇧🇴"}, "592": {"name": "Guyana", "flag": "🇬🇾"},
-    "593": {"name": "Ecuador", "flag": "🇪🇨"}, "594": {"name": "French Guiana", "flag": "🇬🇫"},
-    "595": {"name": "Paraguay", "flag": "🇵🇾"}, "596": {"name": "Martinique", "flag": "🇲🇶"},
-    "597": {"name": "Suriname", "flag": "🇸🇷"}, "598": {"name": "Uruguay", "flag": "🇺🇾"},
-    "599": {"name": "Curacao", "flag": "🇨🇼"}, "60": {"name": "Malaysia", "flag": "🇲🇾"},
-    "61": {"name": "Australia", "flag": "🇦🇺"}, "62": {"name": "Indonesia", "flag": "🇮🇩"},
-    "63": {"name": "Philippines", "flag": "🇵🇭"}, "64": {"name": "New Zealand", "flag": "🇳🇿"},
-    "65": {"name": "Singapore", "flag": "🇸🇬"}, "66": {"name": "Thailand", "flag": "🇹🇭"},
-    "670": {"name": "Timor-Leste", "flag": "🇹🇱"}, "672": {"name": "Norfolk Isl.", "flag": "🇳🇫"},
-    "673": {"name": "Brunei", "flag": "🇧🇳"}, "674": {"name": "Nauru", "flag": "🇳🇷"},
-    "675": {"name": "Papua N.G.", "flag": "🇵🇬"}, "676": {"name": "Tonga", "flag": "🇹🇴"},
-    "677": {"name": "Solomon Isl.", "flag": "🇸🇧"}, "678": {"name": "Vanuatu", "flag": "🇻🇺"},
-    "679": {"name": "Fiji", "flag": "🇫🇯"}, "680": {"name": "Palau", "flag": "🇵🇼"},
-    "681": {"name": "Wallis/Futuna", "flag": "🇼🇫"}, "682": {"name": "Cook Isl.", "flag": "🇨🇰"},
-    "683": {"name": "Niue", "flag": "🇳🇺"}, "685": {"name": "Samoa", "flag": "🇼🇸"},
-    "686": {"name": "Kiribati", "flag": "🇰🇮"}, "687": {"name": "New Caledonia", "flag": "🇳🇨"},
-    "688": {"name": "Tuvalu", "flag": "🇹🇻"}, "689": {"name": "Fr. Polynesia", "flag": "🇵🇫"},
-    "690": {"name": "Tokelau", "flag": "🇹🇰"}, "691": {"name": "Micronesia", "flag": "🇫🇲"},
-    "692": {"name": "Marshall Isl.", "flag": "🇲🇭"}, "81": {"name": "Japan", "flag": "🇯🇵"},
-    "82": {"name": "South Korea", "flag": "🇰🇷"}, "84": {"name": "Vietnam", "flag": "🇻🇳"},
-    "850": {"name": "North Korea", "flag": "🇰🇵"}, "852": {"name": "Hong Kong", "flag": "🇭🇰"},
-    "853": {"name": "Macau", "flag": "🇲🇴"}, "855": {"name": "Cambodia", "flag": "🇰🇭"},
-    "856": {"name": "Laos", "flag": "🇱🇦"}, "86": {"name": "China", "flag": "🇨🇳"},
-    "880": {"name": "Bangladesh", "flag": "🇧🇩"}, "886": {"name": "Taiwan", "flag": "🇹🇼"},
-    "90": {"name": "Turkey", "flag": "🇹🇷"}, "91": {"name": "India", "flag": "🇮🇳"},
-    "92": {"name": "Pakistan", "flag": "🇵🇰"}, "93": {"name": "Afghanistan", "flag": "🇦🇫"},
-    "94": {"name": "Sri Lanka", "flag": "🇱🇰"}, "95": {"name": "Myanmar", "flag": "🇲🇲"},
-    "960": {"name": "Maldives", "flag": "🇲🇻"}, "961": {"name": "Lebanon", "flag": "🇱🇧"},
-    "962": {"name": "Jordan", "flag": "🇯🇴"}, "963": {"name": "Syria", "flag": "🇸🇾"},
-    "964": {"name": "Iraq", "flag": "🇮🇶"}, "965": {"name": "Kuwait", "flag": "🇰🇼"},
-    "966": {"name": "Saudi Arabia", "flag": "🇸🇦"}, "967": {"name": "Yemen", "flag": "🇾🇪"},
-    "968": {"name": "Oman", "flag": "🇴🇲"}, "970": {"name": "Palestine", "flag": "🇵🇸"},
-    "971": {"name": "UAE", "flag": "🇦🇪"}, "972": {"name": "Israel", "flag": "🇮🇱"},
-    "973": {"name": "Bahrain", "flag": "🇧🇭"}, "974": {"name": "Qatar", "flag": "🇶🇦"},
-    "975": {"name": "Bhutan", "flag": "🇧🇹"}, "976": {"name": "Mongolia", "flag": "🇲🇳"},
-    "977": {"name": "Nepal", "flag": "🇳🇵"}, "992": {"name": "Tajikistan", "flag": "🇹🇯"},
-    "993": {"name": "Turkmenistan", "flag": "🇹🇲"}, "994": {"name": "Azerbaijan", "flag": "🇦🇿"},
-    "995": {"name": "Georgia", "flag": "🇬🇪"}, "996": {"name": "Kyrgyzstan", "flag": "🇰🇬"},
-    "998": {"name": "Uzbekistan", "flag": "🇺🇿"}
+    "880": {"name": "Bangladesh", "flag": "🇧🇩"}, "91": {"name": "India", "flag": "🇮🇳"},
+    "92": {"name": "Pakistan", "flag": "🇵🇰"}, "971": {"name": "UAE", "flag": "🇦🇪"},
+    # ... (Other countries from your list)
 }
 
-def get_flag_info(range_val):
-    clean = str(range_val).replace("+", "").replace("X", "").strip()
-    sorted_codes = sorted(COUNTRY_DATA.keys(), key=len, reverse=True)
-    for code in sorted_codes:
-        if clean.startswith(code):
-            return COUNTRY_DATA[code]
-    return {"name": "International", "flag": "🌍"}
+logging.basicConfig(level=logging.INFO)
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher()
 
-# --- WEB SERVER ---
-app = Flask('')
-@app.route('/')
-def home(): return "Borhan OTP Bot: ONLINE"
-def run_web_server(): serve(app, host='0.0.0.0', port=8080)
+class OrderProcess(StatesGroup):
+    selecting_service = State()
+    selecting_country = State()
+    active_number = State()
 
-# --- KEYBOARDS ---
-def main_menu():
-    markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    markup.add("📞 Get Number", "🎯 Custom Range", "🖥️ Console", "📊 Stats")
-    return markup
+# --- HELPER FUNCTIONS ---
 
-# --- OTP POLLING ---
-def poll_otp(chat_id, num, user_name, service_name):
-    start_time = time.time()
-    active_sessions[chat_id] = num
-    
-    while time.time() - start_time < 600:
-        if chat_id not in active_sessions or active_sessions[chat_id] != num:
-            return
-
+async def fetch_panel(endpoint, method="GET", json_data=None):
+    headers = {"mauthapi": PANEL_API_KEY}
+    async with httpx.AsyncClient() as client:
         try:
-            r = requests.get(f"{BASE_URL}/success-otp", headers=HEADERS, timeout=10).json()
-            if r['meta']['code'] == 200:
-                for o in r['data'].get('otps', []):
-                    if str(o['number']) == str(num):
-                        raw_msg = o['message']
-                        otp_match = re.search(r'\d{4,8}', raw_msg)
-                        code = otp_match.group() if otp_match else raw_msg
-                        
-                        bot.send_message(chat_id, 
-                            f"⚡️ **OTP RECEIVED!**\n"
-                            f"━━━━━━━━━━━━━━━━━━\n"
-                            f"📱 Number: `{num}`\n"
-                            f"🔑 Code: `{code}`\n"
-                            f"━━━━━━━━━━━━━━━━━━\n"
-                            f"💡 *Tap to copy code.*", parse_mode="Markdown")
-                        
-                        # Log to Group
-                        log = (f"📢 **SUCCESSFUL ACTIVATION**\n"
-                               f"👤 User: {user_name}\n"
-                               f"📱 Number: `{num}`\n"
-                               f"🔑 OTP: `{code}`\n"
-                               f"🌐 Service: {service_name}")
-                        bot.send_message(GROUP_ID, log, parse_mode="Markdown")
-                        
-                        if chat_id in active_sessions: del active_sessions[chat_id]
-                        return
-        except: pass
-        time.sleep(8)
+            if method == "GET":
+                response = await client.get(f"{BASE_URL}/{endpoint}", headers=headers)
+            else:
+                response = await client.post(f"{BASE_URL}/{endpoint}", headers=headers, json=json_data)
+            return response.json()
+        except Exception as e:
+            logging.error(f"API Error: {e}")
+            return None
+
+def mask_number(num):
+    # Removes 3 digits from middle for group privacy
+    if len(num) < 7: return num
+    mid = len(num) // 2
+    return f"{num[:mid-1]}***{num[mid+2:]}"
+
+def extract_otp(message):
+    # Finds 4-8 digit codes in text
+    match = re.search(r'\b(\d{4,8})\b', message)
+    return match.group(1) if match else "Wait for OTP..."
 
 # --- HANDLERS ---
-@bot.message_handler(commands=['start'])
-def start(message):
-    welcome = (f"👋 **Hello {message.from_user.first_name}!**\n\n"
-               f"Welcome to **Borhan Premium OTP**.\n"
-               f"Instant numbers for WhatsApp, Facebook & more.\n\n"
-               f"👨‍💻 **Dev:** [BORHAN](https://t.me/BORHANSB)")
-    bot.send_message(message.chat.id, welcome, reply_markup=main_menu(), parse_mode="Markdown", disable_web_page_preview=True)
 
-@bot.message_handler(func=lambda m: m.text == "📞 Get Number")
-def choose_service(m):
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("📘 Facebook", callback_data="select_facebook"))
-    markup.add(types.InlineKeyboardButton("🟢 WhatsApp", callback_data="select_whatsapp"))
-    bot.send_message(m.chat.id, "💎 **Choose Service:**", reply_markup=markup)
+@dp.message(Command("start"))
+async def start_cmd(message: types.Message):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="📱 Get Number", callback_data="get_num")
+    await message.answer(
+        "✨ *Welcome to Voltx SMS Bot*\nProfessional Virtual Number Service.",
+        reply_markup=kb.as_markup(),
+        parse_mode="Markdown"
+    )
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("select_"))
-def show_countries(call):
-    service_type = call.data.split("_")[1]
-    bot.edit_message_text(f"🔍 Analyzing global traffic for {service_type.upper()}...", call.message.chat.id, call.message.message_id)
+@dp.callback_query(F.data == "get_num")
+async def choose_service(callback: types.CallbackQuery, state: FSMContext):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Facebook 📘", callback_data="srv_Facebook")
+    kb.button(text="Instagram 📸", callback_data="srv_Instagram")
+    kb.adjust(2)
+    await callback.message.edit_text("Select the service you need:", reply_markup=kb.as_markup())
+    await state.set_state(OrderProcess.selecting_service)
+
+@dp.callback_query(F.data.startswith("srv_"))
+async def choose_country(callback: types.CallbackQuery, state: FSMContext):
+    service = callback.data.split("_")[1]
+    await state.update_data(service=service)
     
-    try:
-        res = requests.get(f"{BASE_URL}/liveaccess", headers=HEADERS).json()
-        if res['meta']['code'] == 200:
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            seen = set()
-            target_keys = ["fb", "facebook"] if service_type=="facebook" else ["wa", "whatsapp"]
-            
-            for s in res['data']['services']:
-                if any(k in s['sid'].lower() for k in target_keys):
-                    for r in s['ranges']:
-                        info = get_flag_info(r)
-                        if info['name'] not in seen:
-                            rid = r.replace("X", "")
-                            markup.add(types.InlineKeyboardButton(f"{info['flag']} {info['name']} ({r})", callback_data=f"buy_{s['sid']}_{rid}"))
-                            seen.add(info['name'])
-                        if len(seen) >= 15: break
-            
-            bot.edit_message_text(f"🌍 **Available Countries ({service_type.title()}):**", call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
-    except: pass
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("buy_") or call.data.startswith("change_"))
-def buy_number(call):
-    parts = call.data.split("_")
-    sid, rid = parts[1], parts[2]
-    chat_id = call.message.chat.id
+    # Fetch live traffic to see which countries are active
+    data = await fetch_panel("liveaccess")
+    active_ranges = []
     
-    if chat_id in active_sessions: del active_sessions[chat_id]
+    if data and data.get("meta", {}).get("code") == 200:
+        for s in data['data']['services']:
+            if service.lower() in s['sid'].lower():
+                active_ranges.extend(s['ranges'])
+
+    kb = InlineKeyboardBuilder()
+    found_countries = set()
     
-    bot.edit_message_text("⏳ **Securing new number...**", chat_id, call.message.message_id)
+    # Match active ranges to our COUNTRY_DATA
+    for r in active_ranges:
+        prefix = r.replace("XXX", "")
+        # Find matching country code
+        for code, info in COUNTRY_DATA.items():
+            if prefix.startswith(code):
+                if code not in found_countries:
+                    kb.button(text=f"{info['flag']} {info['name']}", callback_data=f"cnt_{prefix}")
+                    found_countries.add(code)
+
+    if not found_countries:
+        await callback.answer("No live traffic found for this service. Try later.", show_alert=True)
+        return
+
+    kb.adjust(2)
+    kb.row(types.InlineKeyboardButton(text="⬅️ Back", callback_data="get_num"))
+    await callback.message.edit_text(f"Select a Country for {service}:", reply_markup=kb.as_markup())
+    await state.set_state(OrderProcess.selecting_country)
+
+@dp.callback_query(F.data.startswith("cnt_"))
+async def get_number(callback: types.CallbackQuery, state: FSMContext):
+    prefix = callback.data.split("_")[1]
+    await callback.message.edit_text("⚡ Allocating number... please wait.")
     
-    try:
-        res = requests.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=HEADERS).json()
-        if res['meta']['code'] == 200:
-            data = res['data']
-            num = data['no_plus_number']
-            info = get_flag_info(num)
-            
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"change_{sid}_{rid}"))
-            markup.add(types.InlineKeyboardButton("❌ Cancel", callback_data="cancel_order"))
-            markup.add(types.InlineKeyboardButton("📢 Join Channel", url=GROUP_LINK))
+    res = await fetch_panel("getnum", method="POST", json_data={"rid": prefix})
+    
+    if res and res.get("meta", {}).get("code") == 200:
+        num_data = res['data']
+        full_num = num_data['full_number']
+        
+        await state.update_data(active_num=full_num)
+        
+        kb = InlineKeyboardBuilder()
+        kb.button(text="🔄 Change Number", callback_data="get_num")
+        kb.button(text="🌍 Change Country", callback_data="get_num")
+        kb.adjust(1)
 
-            msg = (f"✅ **Number Purchased!**\n━━━━━━━━━━━━━━━━━━\n"
-                   f"🌍 Country: {info['flag']} {info['name']}\n"
-                   f"📱 Number: `{data['full_number']}`\n"
-                   f"🌐 Service: {sid}\n━━━━━━━━━━━━━━━━━━\n"
-                   f"⏳ *Monitoring for incoming OTP...*")
-            
-            bot.edit_message_text(msg, chat_id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
-            threading.Thread(target=poll_otp, args=(chat_id, num, call.from_user.first_name, sid)).start()
-        else:
-            bot.edit_message_text(f"❌ **Stock Alert:** {res['message']}", chat_id, call.message.message_id)
-    except: pass
+        await callback.message.edit_text(
+            f"✅ *Number Allocated*\n\n"
+            f"📌 *Service:* Facebook/Insta\n"
+            f"📞 *Number:* `{full_num}`\n"
+            f"🏳️ *Country:* {num_data['country']}\n\n"
+            f"⌛ Waiting for OTP...",
+            reply_markup=kb.as_markup(),
+            parse_mode="Markdown"
+        )
+        
+        # Start OTP Checking loop for this user
+        asyncio.create_task(check_otp_loop(callback.message, full_num, state))
+    else:
+        await callback.message.edit_text("❌ Out of stock for this range. Try another country.")
 
-@bot.callback_query_handler(func=lambda call: call.data == "cancel_order")
-def cancel_order(call):
-    chat_id = call.message.chat.id
-    if chat_id in active_sessions: del active_sessions[chat_id]
-    bot.edit_message_text("❌ **Order cancelled successfully.**", chat_id, call.message.message_id)
+async def check_otp_loop(message, phone, state):
+    # Check for 5 minutes
+    for _ in range(60):
+        await asyncio.sleep(5)
+        res = await fetch_panel("success-otp")
+        if res and res.get("meta", {}).get("code") == 200:
+            otps = res['data'].get('otps', [])
+            for item in otps:
+                # Check if this OTP is for our specific number
+                if item['number'] in phone:
+                    otp_code = extract_otp(item['message'])
+                    
+                    # 1. Update user chat
+                    await message.edit_text(
+                        f"✅ *OTP Received!*\n\n"
+                        f"📞 *Number:* `{phone}`\n"
+                        f"💬 *Message:* `{item['message']}`\n"
+                        f"🔑 *Code:* `{otp_code}`",
+                        parse_mode="Markdown"
+                    )
+                    
+                    # 2. Forward to Group with masked number
+                    masked = mask_number(phone)
+                    group_msg = (
+                        f"🔔 *New OTP Logged*\n"
+                        f"📱 Number: `{masked}`\n"
+                        f"📟 Code: `{otp_code}`\n"
+                        f"🌐 Service: FB/Insta"
+                    )
+                    await bot.send_message(GROUP_ID, group_msg, parse_mode="Markdown")
+                    await state.clear()
+                    return
+    
+    await message.answer("⏰ OTP Timeout. No message received.")
 
-@bot.message_handler(func=lambda m: m.text == "🎯 Custom Range")
-def custom_range(m):
-    msg = bot.send_message(m.chat.id, "🎯 **Enter Range Prefix (e.g., 88017):**", parse_mode="Markdown")
-    bot.register_next_step_handler(msg, process_custom)
-
-def process_custom(m):
-    rid = m.text.strip()
-    info = get_flag_info(rid)
-    loading = bot.send_message(m.chat.id, f"⏳ Searching {info['flag']} {info['name']} number...")
-    try:
-        res = requests.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=HEADERS).json()
-        if res['meta']['code'] == 200:
-            data = res['data']
-            bot.edit_message_text(f"✅ **Purchased:** `{data['full_number']}`\n🌍 {info['flag']} {info['name']}", m.chat.id, loading.message_id, parse_mode="Markdown")
-            threading.Thread(target=poll_otp, args=(m.chat.id, data['no_plus_number'], m.from_user.first_name, "Custom")).start()
-        else: bot.edit_message_text("❌ This range is out of stock.", m.chat.id, loading.message_id)
-    except: pass
-
-@bot.message_handler(func=lambda m: m.text == "🖥️ Console")
-def console(m):
-    try:
-        res = requests.get(f"{BASE_URL}/console", headers=HEADERS).json()
-        if res['meta']['code'] == 200:
-            text = "🖥️ **Live Global Traffic:**\n\n"
-            for h in res['data'].get('hits', [])[:10]:
-                info = get_flag_info(h['range'])
-                text += f"{info['flag']} `{h['range']}` | {h['sid']}\n"
-            bot.send_message(m.chat.id, text, parse_mode="Markdown")
-    except: pass
-
-@bot.message_handler(func=lambda m: m.text == "📊 Stats")
-def stats(m):
-    text = (f"📊 **Bot Status:** Online\n"
-            f"⚡ **Speed:** High Performance\n"
-            f"👨‍💻 **Dev:** [BORHAN](https://t.me/BORHANSB)")
-    bot.reply_to(m, text, parse_mode="Markdown", disable_web_page_preview=True)
+async def main():
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    threading.Thread(target=run_web_server).start()
-    print("Borhan Global OTP Bot is Running...")
-    bot.polling(none_stop=True)
+    asyncio.run(main())
