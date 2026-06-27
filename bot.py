@@ -52,8 +52,13 @@ bot = telebot.TeleBot(API_TOKEN)
 app = Flask('')
 
 @app.route('/')
-def home(): return "OTP SYSTEM MASKED LOG ACTIVE"
-def run(): app.run(host='0.0.0.0', port=8080)
+def home(): return "BOT STATUS: ACTIVE"
+
+def run():
+    # Render-এর জন্য ডাইনামিক পোর্ট সেটআপ
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
 def keep_alive(): Thread(target=run).start()
 
 def get_headers(): return {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
@@ -61,12 +66,11 @@ def get_headers(): return {"mauthapi": VOLTX_KEY, "Content-Type": "application/j
 def detect_country(range_str):
     for length in [3, 2, 1]:
         p = range_str[:length]
-        if p in COUNTRY_DATA:
-            return p
+        if p in COUNTRY_DATA: return p
     return None
 
 def monitor_otp(chat_id, number, svc):
-    """ওটিপি মনিটর করবে এবং ম্যাচ করলে ফুল মেসেজ পাঠাবে"""
+    """ওটিপি মনিটর করবে এবং ওটিপি আসলে ইউজারকে ফুল মেসেজ পাঠাবে"""
     start_time = time.time()
     target_num = re.sub(r'\D', '', str(number))
     
@@ -81,18 +85,17 @@ def monitor_otp(chat_id, number, svc):
                         msg = item['message']
                         display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
                         
-                        # ইউজারের জন্য ফুল মেসেজ
+                        # ইউজারের জন্য ফুল ওটিপি মেসেজ
                         final_text = f"✅ *{display_svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
                         bot.send_message(chat_id, final_text, parse_mode="Markdown")
                         
-                        # গ্রুপের জন্য নম্বর মাস্কিং লজিক
+                        # গ্রুপে নম্বর মাস্কিং লগ (মাঝের ৩টি ডিজিট ***)
                         num_str = str(number)
                         length = len(num_str)
-                        if length > 5:
-                            mid = length // 2
-                            masked_num = num_str[:mid-1] + "***" + num_str[mid+2:]
+                        if length > 6:
+                            masked_num = num_str[:3] + "***" + num_str[-3:]
                         else:
-                            masked_num = "***" + num_str[-2:] if length > 2 else "***"
+                            masked_num = "***" + num_str[-2:]
                             
                         bot.send_message(GROUP_ID, f"🔔 *OTP LOG*\nSvc: {svc}\nNum: `{masked_num}`\nMsg: {msg}")
                         return
@@ -103,10 +106,18 @@ def monitor_otp(chat_id, number, svc):
 def start_handler(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("📞 Get Number", "💰 Balance")
+    welcome_text = "👋 Hello!\n**Sync Mode** (Facebook/Instagram) চালু আছে।"
     try:
-        bot.send_photo(message.chat.id, WELCOME_IMAGE, caption="👋 Hello!\n**Sync Mode** (Facebook/Instagram) চালু আছে।", reply_markup=markup)
+        bot.send_photo(message.chat.id, WELCOME_IMAGE, caption=welcome_text, reply_markup=markup, parse_mode="Markdown")
     except:
-        bot.send_message(message.chat.id, "👋 Hello!\n**Sync Mode** (Facebook/Instagram) চালু আছে।", reply_markup=markup)
+        bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
+
+@bot.message_handler(func=lambda message: message.text == "💰 Balance")
+def balance_handler(message):
+    res = session.get(f"{BASE_URL}/user-balance", headers=get_headers()).json()
+    if res.get('meta', {}).get('code') == 200:
+        bal = res['data']['balance']
+        bot.send_message(message.chat.id, f"💳 আপনার বর্তমান ব্যালেন্স: `{bal} BDT`", parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.text == "📞 Get Number")
 def service_menu(message):
@@ -132,8 +143,7 @@ def query_handler(call):
                             c_code = detect_country(r)
                             if c_code: sync_list.append((c_code, r))
                 
-                top_ranges = sync_list[:10] 
-                for code, rid in top_ranges:
+                for code, rid in sync_list[:10]:
                     c = COUNTRY_DATA[code]
                     clean_rid = rid.replace("XXX", "")
                     mk.add(types.InlineKeyboardButton(f"⚡ {c['flag']} {c['name']} (Range: {clean_rid})", callback_data=f"buy_{svc}_{clean_rid}"))
@@ -160,8 +170,7 @@ def query_handler(call):
                 bot.edit_message_text(f"✅ *Number Allocated*\n━━━━━━━━━━━━━━━━━━━━\n"
                                      f"📞 Number: `{num}`\n"
                                      f"🛠 Service: `{display_svc}`\n"
-                                     f"⏳ Status: Waiting for OTP...\n━━━━━━━━━━━━━━━━━━━━\n"
-                                     f"💡 ওটিপি না আসলে 'Change Number' ক্লিক করুন।", 
+                                     f"⏳ Status: Waiting for OTP...\n━━━━━━━━━━━━━━━━━━━━", 
                                      call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
                 
                 Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
@@ -172,4 +181,5 @@ def query_handler(call):
 
 if __name__ == "__main__":
     keep_alive()
-    bot.infinity_polling()
+    # skip_pending=True দিলে বটের কনফ্লিক্ট এরর আসবে না
+    bot.infinity_polling(skip_pending=True)
