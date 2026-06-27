@@ -97,6 +97,7 @@ def monitor_otp(chat_id, number, svc):
         except: pass
         time.sleep(2)
 
+# --- মূল হ্যান্ডলার ---
 @bot.message_handler(commands=['start'])
 def start_handler(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -174,11 +175,12 @@ def query_handler(call):
         except:
             bot.send_message(call.message.chat.id, "❌ Server Error.")
 
-# --- এই অংশটি মেনু কমান্ড আপডেট করবে ---
+# --- বটের মেনু সেটআপ এবং রান ---
 if __name__ == "__main__":
     keep_alive()
-    # শুধুমাত্র /start কমান্ডটি মেনুতে রাখবে, /get_number সরিয়ে ফেলবে
+    # শুধুমাত্র /start কমান্ডটি মেনুতে সেট করা হয়েছে
     bot.set_my_commands([
-        types.BotCommand("start", "Main Menu")
+        types.BotCommand("start", "মূল মেনু ওপেন করুন")
     ])
+    print("Bot is running...")
     bot.infinity_polling(skip_pending=True)
