@@ -52,7 +52,7 @@ bot = telebot.TeleBot(API_TOKEN)
 app = Flask('')
 
 @app.route('/')
-def home(): return "OTP SYSTEM FIXED"
+def home(): return "OTP SYSTEM MASKED LOG ACTIVE"
 def run(): app.run(host='0.0.0.0', port=8080)
 def keep_alive(): Thread(target=run).start()
 
@@ -68,7 +68,6 @@ def detect_country(range_str):
 def monitor_otp(chat_id, number, svc):
     """ওটিপি মনিটর করবে এবং ম্যাচ করলে ফুল মেসেজ পাঠাবে"""
     start_time = time.time()
-    # নম্বর থেকে শুধু ডিজিট নিয়ে ক্লিন করা হলো (ম্যাচিং সহজ করার জন্য)
     target_num = re.sub(r'\D', '', str(number))
     
     while time.time() - start_time < 600:
@@ -81,10 +80,21 @@ def monitor_otp(chat_id, number, svc):
                     if target_num == found_num:
                         msg = item['message']
                         display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
-                        final_text = f"✅ *{display_svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
                         
+                        # ইউজারের জন্য ফুল মেসেজ
+                        final_text = f"✅ *{display_svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
                         bot.send_message(chat_id, final_text, parse_mode="Markdown")
-                        bot.send_message(GROUP_ID, f"🔔 *OTP LOG*\nSvc: {svc}\nNum: {number}\nMsg: {msg}")
+                        
+                        # গ্রুপের জন্য নম্বর মাস্কিং লজিক
+                        num_str = str(number)
+                        length = len(num_str)
+                        if length > 5:
+                            mid = length // 2
+                            masked_num = num_str[:mid-1] + "***" + num_str[mid+2:]
+                        else:
+                            masked_num = "***" + num_str[-2:] if length > 2 else "***"
+                            
+                        bot.send_message(GROUP_ID, f"🔔 *OTP LOG*\nSvc: {svc}\nNum: `{masked_num}`\nMsg: {msg}")
                         return
         except: pass
         time.sleep(2)
