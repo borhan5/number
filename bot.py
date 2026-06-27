@@ -13,7 +13,6 @@ WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg"
 
 session = requests.Session()
 
-# Full Country Database
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -53,7 +52,7 @@ bot = telebot.TeleBot(API_TOKEN)
 app = Flask('')
 
 @app.route('/')
-def home(): return "SYNC MODE: FB & INSTA COMBINED ACTIVE"
+def home(): return "OTP SYSTEM FIXED"
 def run(): app.run(host='0.0.0.0', port=8080)
 def keep_alive(): Thread(target=run).start()
 
@@ -67,17 +66,22 @@ def detect_country(range_str):
     return None
 
 def monitor_otp(chat_id, number, svc):
-    """ওটিপি মনিটর করবে এবং ফুল মেসেজ পাঠাবে"""
+    """ওটিপি মনিটর করবে এবং ম্যাচ করলে ফুল মেসেজ পাঠাবে"""
     start_time = time.time()
+    # নম্বর থেকে শুধু ডিজিট নিয়ে ক্লিন করা হলো (ম্যাচিং সহজ করার জন্য)
+    target_num = re.sub(r'\D', '', str(number))
+    
     while time.time() - start_time < 600:
         try:
             res = session.get(f"{BASE_URL}/success-otp", headers=get_headers(), timeout=5).json()
             if res.get('meta', {}).get('code') == 200:
                 for item in res['data'].get('otps', []):
-                    if str(item['number']) == str(number):
+                    found_num = re.sub(r'\D', '', str(item['number']))
+                    
+                    if target_num == found_num:
                         msg = item['message']
-                        # আপডেট: এখন সব সময় ফুল মেসেজ যাবে
-                        final_text = f"✅ *{svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
+                        display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
+                        final_text = f"✅ *{display_svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
                         
                         bot.send_message(chat_id, final_text, parse_mode="Markdown")
                         bot.send_message(GROUP_ID, f"🔔 *OTP LOG*\nSvc: {svc}\nNum: {number}\nMsg: {msg}")
@@ -97,7 +101,6 @@ def start_handler(message):
 @bot.message_handler(func=lambda message: message.text == "📞 Get Number")
 def service_menu(message):
     mk = types.InlineKeyboardMarkup(row_width=1)
-    # Facebook ও Instagram-কে একই সার্ভিসের আওতায় আনা হলো
     mk.add(
         types.InlineKeyboardButton("📘 FACEBOOK / 📸 INSTAGRAM", callback_data="svc_Facebook"),
         types.InlineKeyboardButton("💬 WHATSAPP", callback_data="svc_WhatsApp")
