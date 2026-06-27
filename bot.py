@@ -13,6 +13,7 @@ WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg"
 
 session = requests.Session()
 
+# Full Country Database
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -52,11 +53,19 @@ bot = telebot.TeleBot(API_TOKEN)
 app = Flask('')
 
 @app.route('/')
-def home(): return "OTP SYSTEM MASKED LOG ACTIVE"
-def run(): app.run(host='0.0.0.0', port=8080)
-def keep_alive(): Thread(target=run).start()
+def home():
+    return "BOT IS LIVE AND RUNNING"
 
-def get_headers(): return {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
+def run():
+    # Render এর জন্য ডাইনামিক পোর্ট সেটআপ (খুবই গুরুত্বপূর্ণ)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    Thread(target=run).start()
+
+def get_headers():
+    return {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
 def detect_country(range_str):
     for length in [3, 2, 1]:
@@ -81,18 +90,17 @@ def monitor_otp(chat_id, number, svc):
                         msg = item['message']
                         display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
                         
-                        # ইউজারের জন্য ফুল মেসেজ
+                        # ইউজারের চ্যাটে ফুল মেসেজ
                         final_text = f"✅ *{display_svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
                         bot.send_message(chat_id, final_text, parse_mode="Markdown")
                         
-                        # গ্রুপের জন্য নম্বর মাস্কিং লজিক
+                        # গ্রুপের জন্য নম্বর মাস্কিং লজিক (মাঝের ৩টা ***)
                         num_str = str(number)
                         length = len(num_str)
-                        if length > 5:
-                            mid = length // 2
-                            masked_num = num_str[:mid-1] + "***" + num_str[mid+2:]
+                        if length > 6:
+                            masked_num = num_str[:3] + "***" + num_str[-3:]
                         else:
-                            masked_num = "***" + num_str[-2:] if length > 2 else "***"
+                            masked_num = "***" + num_str[-2:]
                             
                         bot.send_message(GROUP_ID, f"🔔 *OTP LOG*\nSvc: {svc}\nNum: `{masked_num}`\nMsg: {msg}")
                         return
@@ -103,10 +111,11 @@ def monitor_otp(chat_id, number, svc):
 def start_handler(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("📞 Get Number", "💰 Balance")
+    welcome_msg = "👋 Hello!\n**Sync Mode** (Facebook/Instagram) চালু আছে।"
     try:
-        bot.send_photo(message.chat.id, WELCOME_IMAGE, caption="👋 Hello!\n**Sync Mode** (Facebook/Instagram) চালু আছে।", reply_markup=markup)
+        bot.send_photo(message.chat.id, WELCOME_IMAGE, caption=welcome_msg, reply_markup=markup, parse_mode="Markdown")
     except:
-        bot.send_message(message.chat.id, "👋 Hello!\n**Sync Mode** (Facebook/Instagram) চালু আছে।", reply_markup=markup)
+        bot.send_message(message.chat.id, welcome_msg, reply_markup=markup, parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.text == "📞 Get Number")
 def service_menu(message):
@@ -171,5 +180,7 @@ def query_handler(call):
             bot.send_message(call.message.chat.id, "❌ Server Error.")
 
 if __name__ == "__main__":
+    # Flask সার্ভার স্টার্ট
     keep_alive()
-    bot.infinity_polling()
+    # 409 Conflict এবং আগের জমে থাকা রিকোয়েস্ট ইগনোর করতে skip_pending=True
+    bot.infinity_polling(skip_pending=True)
