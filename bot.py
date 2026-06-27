@@ -13,7 +13,7 @@ WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg"
 
 session = requests.Session()
 
-# Full Country Database (Unchanged)
+# Full Country Database
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -53,7 +53,7 @@ bot = telebot.TeleBot(API_TOKEN)
 app = Flask('')
 
 @app.route('/')
-def home(): return "SYNC MODE: FB & INSTA ACTIVE"
+def home(): return "SYNC MODE: FB & INSTA COMBINED ACTIVE"
 def run(): app.run(host='0.0.0.0', port=8080)
 def keep_alive(): Thread(target=run).start()
 
@@ -67,7 +67,7 @@ def detect_country(range_str):
     return None
 
 def monitor_otp(chat_id, number, svc):
-    """ওটিপি মনিটর করে ফুল মেসেজ ইউজারকে পাঠাবে"""
+    """ওটিপি মনিটর করবে এবং ফুল মেসেজ পাঠাবে"""
     start_time = time.time()
     while time.time() - start_time < 600:
         try:
@@ -76,7 +76,7 @@ def monitor_otp(chat_id, number, svc):
                 for item in res['data'].get('otps', []):
                     if str(item['number']) == str(number):
                         msg = item['message']
-                        # ফুল মেসেজ ইউজারের কাছে যাবে
+                        # আপডেট: এখন সব সময় ফুল মেসেজ যাবে
                         final_text = f"✅ *{svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
                         
                         bot.send_message(chat_id, final_text, parse_mode="Markdown")
@@ -89,26 +89,23 @@ def monitor_otp(chat_id, number, svc):
 def start_handler(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("📞 Get Number", "💰 Balance")
-    welcome_text = "👋 Hello!\n**Sync Mode** (FB & Instagram) এবং **Full Message OTP** চালু আছে।"
     try:
-        bot.send_photo(message.chat.id, WELCOME_IMAGE, caption=welcome_text, reply_markup=markup, parse_mode="Markdown")
-    except Exception:
-        # ছবি লিঙ্কে সমস্যা থাকলে শুধু মেসেজ পাঠাবে
-        bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
+        bot.send_photo(message.chat.id, WELCOME_IMAGE, caption="👋 Hello!\n**Sync Mode** (Facebook/Instagram) চালু আছে।", reply_markup=markup)
+    except:
+        bot.send_message(message.chat.id, "👋 Hello!\n**Sync Mode** (Facebook/Instagram) চালু আছে।", reply_markup=markup)
 
 @bot.message_handler(func=lambda message: message.text == "📞 Get Number")
 def service_menu(message):
-    mk = types.InlineKeyboardMarkup(row_width=2)
+    mk = types.InlineKeyboardMarkup(row_width=1)
+    # Facebook ও Instagram-কে একই সার্ভিসের আওতায় আনা হলো
     mk.add(
-        types.InlineKeyboardButton("📘 FACEBOOK", callback_data="svc_Facebook"),
-        types.InlineKeyboardButton("📸 INSTAGRAM", callback_data="svc_Instagram"),
+        types.InlineKeyboardButton("📘 FACEBOOK / 📸 INSTAGRAM", callback_data="svc_Facebook"),
         types.InlineKeyboardButton("💬 WHATSAPP", callback_data="svc_WhatsApp")
     )
     bot.send_message(message.chat.id, "🛠 সার্ভিস সিলেক্ট করুন:", reply_markup=mk)
 
 @bot.callback_query_handler(func=lambda call: True)
 def query_handler(call):
-    # FB এবং Instagram উভয়ের জন্য একই সিঙ্ক মোড লজিক
     if call.data.startswith("svc_"):
         svc = call.data.split("_")[1]
         try:
@@ -122,15 +119,15 @@ def query_handler(call):
                             c_code = detect_country(r)
                             if c_code: sync_list.append((c_code, r))
                 
-                # ১০টি পর্যন্ত এভেইলএবল রেঞ্জ দেখাবে
                 top_ranges = sync_list[:10] 
                 for code, rid in top_ranges:
                     c = COUNTRY_DATA[code]
                     clean_rid = rid.replace("XXX", "")
                     mk.add(types.InlineKeyboardButton(f"⚡ {c['flag']} {c['name']} (Range: {clean_rid})", callback_data=f"buy_{svc}_{clean_rid}"))
                 
-                bot.edit_message_text(f"🚀 *SYNC MODE:* {svc} Available Ranges:", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
-        except Exception:
+                display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
+                bot.edit_message_text(f"🚀 *SYNC MODE:* {display_svc} Available Ranges:", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+        except:
             bot.answer_callback_query(call.id, "Error fetching ranges.")
 
     elif call.data.startswith("buy_"):
@@ -141,6 +138,7 @@ def query_handler(call):
             order = session.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=get_headers()).json()
             if order.get('meta', {}).get('code') == 200:
                 num = order['data']['full_number']
+                display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
                 
                 mk = types.InlineKeyboardMarkup()
                 mk.add(types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"buy_{svc}_{rid}"))
@@ -148,16 +146,16 @@ def query_handler(call):
                 
                 bot.edit_message_text(f"✅ *Number Allocated*\n━━━━━━━━━━━━━━━━━━━━\n"
                                      f"📞 Number: `{num}`\n"
-                                     f"🛠 Service: `{svc}`\n"
+                                     f"🛠 Service: `{display_svc}`\n"
                                      f"⏳ Status: Waiting for OTP...\n━━━━━━━━━━━━━━━━━━━━\n"
                                      f"💡 ওটিপি না আসলে 'Change Number' ক্লিক করুন।", 
                                      call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
                 
                 Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
             else:
-                bot.send_message(call.message.chat.id, "❌ Error: Stock empty or No Balance for this range.")
-        except Exception:
-            bot.send_message(call.message.chat.id, "❌ Service Currently Unavailable.")
+                bot.send_message(call.message.chat.id, "❌ Error: Stock empty or No Balance.")
+        except:
+            bot.send_message(call.message.chat.id, "❌ Server Error.")
 
 if __name__ == "__main__":
     keep_alive()
