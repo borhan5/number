@@ -13,6 +13,9 @@ WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg"
 
 session = requests.Session()
 
+# ১০০+ ইউজার হ্যান্ডেল করার জন্য গ্লোবাল লিস্ট
+active_orders = {} # { 'clean_number': { 'chat_id': id, 'svc': svc, 'time': start_time } }
+
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -55,7 +58,6 @@ app = Flask('')
 def home(): return "BOT STATUS: ACTIVE"
 
 def run():
-    # Render-এর জন্য ডাইনামিক পোর্ট সেটআপ
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
@@ -69,38 +71,42 @@ def detect_country(range_str):
         if p in COUNTRY_DATA: return p
     return None
 
-def monitor_otp(chat_id, number, svc):
-    """ওটিপি মনিটর করবে এবং ওটিপি আসলে ইউজারকে ফুল মেসেজ পাঠাবে"""
-    start_time = time.time()
-    target_num = re.sub(r'\D', '', str(number))
-    
-    while time.time() - start_time < 600:
-        try:
-            res = session.get(f"{BASE_URL}/success-otp", headers=get_headers(), timeout=5).json()
-            if res.get('meta', {}).get('code') == 200:
-                for item in res['data'].get('otps', []):
-                    found_num = re.sub(r'\D', '', str(item['number']))
-                    
-                    if target_num == found_num:
-                        msg = item['message']
-                        display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
+# --- ১০০+ ইউজারের জন্য গ্লোবাল মনিটর ফাংশন ---
+def global_otp_monitor():
+    """একই সাথে সব নাম্বারের ওটিপি চেক করার সিস্টেম"""
+    while True:
+        if active_orders:
+            try:
+                res = session.get(f"{BASE_URL}/success-otp", headers=get_headers(), timeout=10).json()
+                if res.get('meta', {}).get('code') == 200:
+                    otps = res['data'].get('otps', [])
+                    for item in otps:
+                        found_num = re.sub(r'\D', '', str(item['number']))
                         
-                        # ইউজারের জন্য ফুল ওটিপি মেসেজ
-                        final_text = f"✅ *{display_svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
-                        bot.send_message(chat_id, final_text, parse_mode="Markdown")
-                        
-                        # গ্রুপে নম্বর মাস্কিং লগ (মাঝের ৩টি ডিজিট ***)
-                        num_str = str(number)
-                        length = len(num_str)
-                        if length > 6:
-                            masked_num = num_str[:3] + "***" + num_str[-3:]
-                        else:
-                            masked_num = "***" + num_str[-2:]
+                        if found_num in active_orders:
+                            data = active_orders[found_num]
+                            chat_id = data['chat_id']
+                            svc = data['svc']
+                            msg = item['message']
                             
-                        bot.send_message(GROUP_ID, f"🔔 *OTP LOG*\nSvc: {svc}\nNum: `{masked_num}`\nMsg: {msg}")
-                        return
-        except: pass
-        time.sleep(2)
+                            display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
+                            final_text = f"✅ *{display_svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{found_num}`"
+                            bot.send_message(chat_id, final_text, parse_mode="Markdown")
+                            
+                            # মাস্কিং লগ
+                            masked_num = found_num[:3] + "***" + found_num[-3:]
+                            bot.send_message(GROUP_ID, f"🔔 *OTP LOG*\nSvc: {svc}\nNum: `{masked_num}`\nMsg: {msg}")
+                            
+                            # ডেলিভারি হয়ে গেলে লিস্ট থেকে রিমুভ
+                            del active_orders[found_num]
+            except: pass
+
+            # ১০ মিনিট পার হয়ে গেলে অটোমেটিক রিমুভ করা (ক্লিন আপ)
+            current_time = time.time()
+            expired = [num for num, info in active_orders.items() if current_time - info['time'] > 600]
+            for num in expired: del active_orders[num]
+
+        time.sleep(5) # ৫ সেকেন্ড পর পর একবার চেক করবে সবার জন্য (API এর জন্য সেফ)
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
@@ -160,9 +166,17 @@ def query_handler(call):
         try:
             order = session.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=get_headers()).json()
             if order.get('meta', {}).get('code') == 200:
-                num = order['data']['full_number']
+                num = str(order['data']['full_number'])
+                clean_num = re.sub(r'\D', '', num)
                 display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
                 
+                # অর্ডারের ডিটেইলস সেভ করা মনিটরের জন্য
+                active_orders[clean_num] = {
+                    "chat_id": call.message.chat.id,
+                    "svc": svc,
+                    "time": time.time()
+                }
+
                 mk = types.InlineKeyboardMarkup()
                 mk.add(types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"buy_{svc}_{rid}"))
                 mk.add(types.InlineKeyboardButton("📢 JOIN GROUP", url=GROUP_LINK))
@@ -172,8 +186,6 @@ def query_handler(call):
                                      f"🛠 Service: `{display_svc}`\n"
                                      f"⏳ Status: Waiting for OTP...\n━━━━━━━━━━━━━━━━━━━━", 
                                      call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
-                
-                Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
             else:
                 bot.send_message(call.message.chat.id, "❌ Error: Stock empty or No Balance.")
         except:
@@ -181,5 +193,6 @@ def query_handler(call):
 
 if __name__ == "__main__":
     keep_alive()
-    # skip_pending=True দিলে বটের কনফ্লিক্ট এরর আসবে না
+    # মনিটর থ্রেড চালু করা
+    Thread(target=global_otp_monitor, daemon=True).start()
     bot.infinity_polling(skip_pending=True)
