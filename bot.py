@@ -55,7 +55,6 @@ app = Flask('')
 def home(): return "BOT STATUS: ACTIVE"
 
 def run():
-    # Render-এর জন্য ডাইনামিক পোর্ট সেটআপ
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
@@ -70,7 +69,6 @@ def detect_country(range_str):
     return None
 
 def monitor_otp(chat_id, number, svc):
-    """ওটিপি মনিটর করবে এবং ওটিপি আসলে ইউজারকে ফুল মেসেজ পাঠাবে"""
     start_time = time.time()
     target_num = re.sub(r'\D', '', str(number))
     
@@ -84,12 +82,9 @@ def monitor_otp(chat_id, number, svc):
                     if target_num == found_num:
                         msg = item['message']
                         display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
-                        
-                        # ইউজারের জন্য ফুল ওটিপি মেসেজ
                         final_text = f"✅ *{display_svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
                         bot.send_message(chat_id, final_text, parse_mode="Markdown")
                         
-                        # গ্রুপে নম্বর মাস্কিং লগ (মাঝের ৩টি ডিজিট ***)
                         num_str = str(number)
                         length = len(num_str)
                         if length > 6:
@@ -179,7 +174,11 @@ def query_handler(call):
         except:
             bot.send_message(call.message.chat.id, "❌ Server Error.")
 
+# --- এই অংশটি মেনু কমান্ড আপডেট করবে ---
 if __name__ == "__main__":
     keep_alive()
-    # skip_pending=True দিলে বটের কনফ্লিক্ট এরর আসবে না
+    # শুধুমাত্র /start কমান্ডটি মেনুতে রাখবে, /get_number সরিয়ে ফেলবে
+    bot.set_my_commands([
+        types.BotCommand("start", "Main Menu")
+    ])
     bot.infinity_polling(skip_pending=True)
