@@ -3,7 +3,7 @@ from telebot import types
 from flask import Flask
 from threading import Thread
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION (অপরিবর্তিত) ---
 API_TOKEN = "8953289994:AAEpzTRZtGS-K3MBrVC2sT05r5sTb_n7mu8"
 VOLTX_KEY = "MQGVM5B5OOW"
 GROUP_ID = -1003968881110 
@@ -13,6 +13,7 @@ WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg"
 
 session = requests.Session()
 
+# COUNTRY DATA (অপরিবর্তিত)
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -82,47 +83,77 @@ def monitor_otp(chat_id, number, svc):
                     if target_num == found_num:
                         msg = item['message']
                         display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
-                        final_text = f"✅ *{display_svc.upper()} OTP RECEIVED!*\n\n💬 MESSAGE: `{msg}`\n📱 NUMBER: `{number}`"
+                        
+                        # OTP Success Message UI
+                        final_text = (
+                            f"🎊 *CONGRATULATIONS! OTP RECEIVED* 🎊\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"💠 *SERVICE:* `{display_svc.upper()}`\n"
+                            f"📱 *NUMBER:* `{number}`\n"
+                            f"📩 *MESSAGE:* `{msg}`\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"✅ *Verification Successful!*"
+                        )
                         bot.send_message(chat_id, final_text, parse_mode="Markdown")
                         
                         num_str = str(number)
                         length = len(num_str)
-                        if length > 6:
-                            masked_num = num_str[:3] + "***" + num_str[-3:]
-                        else:
-                            masked_num = "***" + num_str[-2:]
+                        masked_num = num_str[:3] + "***" + num_str[-3:] if length > 6 else "***" + num_str[-2:]
                             
-                        bot.send_message(GROUP_ID, f"🔔 *OTP LOG*\nSvc: {svc}\nNum: `{masked_num}`\nMsg: {msg}")
+                        bot.send_message(GROUP_ID, f"🔔 *[OTP LOG]*\nSvc: {svc}\nNum: `{masked_num}`\nMsg: {msg}")
                         return
         except: pass
-        time.sleep(2)
+        time.sleep(3)
 
-# --- মূল হ্যান্ডলার ---
+# --- মূল হ্যান্ডলার (New UI Design) ---
+
 @bot.message_handler(commands=['start'])
 def start_handler(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add("📞 Get Number", "💰 Balance")
-    welcome_text = "👋 Hello!\n**Sync Mode** (Facebook/Instagram) চালু আছে।"
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    markup.add(
+        types.KeyboardButton("🚀 Get Number"), 
+        types.KeyboardButton("💎 My Balance")
+    )
+    
+    welcome_text = (
+        f"👋 *Welcome to Premium OTP Bot*\n\n"
+        f"💠 *Status:* `Active` 🟢\n"
+        f"💠 *Mode:* `Sync (FB/Insta/WA)`\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"নিচের মেনু থেকে আপনার কাঙ্ক্ষিত সার্ভিসটি সিলেক্ট করুন এবং দ্রুত OTP গ্রহণ করুন।\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━"
+    )
     try:
         bot.send_photo(message.chat.id, WELCOME_IMAGE, caption=welcome_text, reply_markup=markup, parse_mode="Markdown")
     except:
         bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
 
-@bot.message_handler(func=lambda message: message.text == "💰 Balance")
+@bot.message_handler(func=lambda message: message.text in ["💎 My Balance", "💰 Balance"])
 def balance_handler(message):
-    res = session.get(f"{BASE_URL}/user-balance", headers=get_headers()).json()
-    if res.get('meta', {}).get('code') == 200:
-        bal = res['data']['balance']
-        bot.send_message(message.chat.id, f"💳 আপনার বর্তমান ব্যালেন্স: `{bal} BDT`", parse_mode="Markdown")
+    try:
+        res = session.get(f"{BASE_URL}/user-balance", headers=get_headers()).json()
+        if res.get('meta', {}).get('code') == 200:
+            bal = res['data']['balance']
+            bal_text = (
+                f"💳 *WALLET INFORMATION*\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"👤 *User:* `{message.from_user.first_name}`\n"
+                f"💰 *Balance:* `{bal} BDT`\n"
+                f"📈 *Status:* `Premium Member` 💎\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━"
+            )
+            bot.send_message(message.chat.id, bal_text, parse_mode="Markdown")
+    except:
+        bot.send_message(message.chat.id, "❌ সার্ভার সমস্যা। আবার চেষ্টা করুন।")
 
-@bot.message_handler(func=lambda message: message.text == "📞 Get Number")
+@bot.message_handler(func=lambda message: message.text in ["🚀 Get Number", "📞 Get Number"])
 def service_menu(message):
     mk = types.InlineKeyboardMarkup(row_width=1)
     mk.add(
         types.InlineKeyboardButton("📘 FACEBOOK / 📸 INSTAGRAM", callback_data="svc_Facebook"),
-        types.InlineKeyboardButton("💬 WHATSAPP", callback_data="svc_WhatsApp")
+        types.InlineKeyboardButton("💬 WHATSAPP BUSINESS", callback_data="svc_WhatsApp")
     )
-    bot.send_message(message.chat.id, "🛠 সার্ভিস সিলেক্ট করুন:", reply_markup=mk)
+    bot.send_message(message.chat.id, "🛠 *সার্ভিস সিলেক্ট করুন:*", reply_markup=mk, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: True)
 def query_handler(call):
@@ -139,19 +170,24 @@ def query_handler(call):
                             c_code = detect_country(r)
                             if c_code: sync_list.append((c_code, r))
                 
-                for code, rid in sync_list[:10]:
+                if not sync_list:
+                    bot.answer_callback_query(call.id, "❌ No stock available!")
+                    return
+
+                for code, rid in sync_list[:12]:
                     c = COUNTRY_DATA[code]
                     clean_rid = rid.replace("XXX", "")
-                    mk.add(types.InlineKeyboardButton(f"⚡ {c['flag']} {c['name']} (Range: {clean_rid})", callback_data=f"buy_{svc}_{clean_rid}"))
+                    mk.add(types.InlineKeyboardButton(f"{c['flag']} {c['name']} (Range: {clean_rid})", callback_data=f"buy_{svc}_{clean_rid}"))
                 
-                display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
-                bot.edit_message_text(f"🚀 *SYNC MODE:* {display_svc} Available Ranges:", call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+                display_svc = "FB/Instagram" if svc == "Facebook" else "WhatsApp"
+                bot.edit_message_text(f"🌍 *{display_svc} Global Stock*\nনিচের লিস্ট থেকে রেঞ্জ সিলেক্ট করুন:", 
+                                     call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
         except:
-            bot.answer_callback_query(call.id, "Error fetching ranges.")
+            bot.answer_callback_query(call.id, "Error fetching data.")
 
     elif call.data.startswith("buy_"):
         _, svc, rid = call.data.split("_")
-        bot.answer_callback_query(call.id, "Allocating Number...")
+        bot.answer_callback_query(call.id, "⚡ Number Allocating...")
         
         try:
             order = session.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=get_headers()).json()
@@ -159,28 +195,34 @@ def query_handler(call):
                 num = order['data']['full_number']
                 display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
                 
-                mk = types.InlineKeyboardMarkup()
-                mk.add(types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"buy_{svc}_{rid}"))
-                mk.add(types.InlineKeyboardButton("📢 JOIN GROUP", url=GROUP_LINK))
+                mk = types.InlineKeyboardMarkup(row_width=1)
+                mk.add(
+                    types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"buy_{svc}_{rid}"),
+                    types.InlineKeyboardButton("📢 JOIN CHANNEL", url=GROUP_LINK)
+                )
                 
-                bot.edit_message_text(f"✅ *Number Allocated*\n━━━━━━━━━━━━━━━━━━━━\n"
-                                     f"📞 Number: `{num}`\n"
-                                     f"🛠 Service: `{display_svc}`\n"
-                                     f"⏳ Status: Waiting for OTP...\n━━━━━━━━━━━━━━━━━━━━", 
-                                     call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+                order_text = (
+                    f"✅ *NUMBER READY TO USE*\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"📞 *Number:* `{num}`\n"
+                    f"🛠 *Service:* `{display_svc}`\n"
+                    f"⏳ *Status:* `Waiting for OTP...` 🌀\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"⚠️ _নাম্বারটি কপি করে আপনার অ্যাপে বসান।_"
+                )
                 
+                bot.edit_message_text(order_text, call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
                 Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
             else:
-                bot.send_message(call.message.chat.id, "❌ Error: Stock empty or No Balance.")
+                bot.send_message(call.message.chat.id, "❌ *Error:* Stock empty or No Balance.")
         except:
             bot.send_message(call.message.chat.id, "❌ Server Error.")
 
 # --- বটের মেনু সেটআপ এবং রান ---
 if __name__ == "__main__":
     keep_alive()
-    # শুধুমাত্র /start কমান্ডটি মেনুতে সেট করা হয়েছে
     bot.set_my_commands([
         types.BotCommand("start", "মূল মেনু ওপেন করুন")
     ])
-    print("Bot is running...")
+    print("--- Premium Sync Bot is Live ---")
     bot.infinity_polling(skip_pending=True)
