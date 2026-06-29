@@ -9,15 +9,17 @@ API_TOKEN = "8953289994:AAHSON1Qjz7BQmZB1gvpu42vkiX0PaCbayA"
 VOLTX_KEY = "MQGVM5B5OOW"
 BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
 
+# অ্যাডমিন তথ্য
 ADMIN_ID = 8250359361
 ADMIN_HANDLE = "@BORHANSB" 
+
 CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 METHOD_LINK = "https://t.me/earntrick_BS"
 
 bot = telebot.TeleBot(API_TOKEN)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- ১৫৫+ দেশের বিশাল ডাটাবেজ ---
+# --- ১৫৫+ দেশের বিশাল ডাটাবেজ (আগের মতোই রাখা হয়েছে) ---
 COUNTRY_DB = {
     "880": {"n": "Bangladesh", "f": "🇧🇩"}, "91": {"n": "India", "f": "🇮🇳"}, "1": {"n": "USA/Canada", "f": "🇺🇸"},
     "44": {"n": "UK", "f": "🇬🇧"}, "7": {"n": "Russia", "f": "🇷🇺"}, "62": {"n": "Indonesia", "f": "🇮🇩"},
@@ -99,7 +101,7 @@ def auto_check_otp(chat_id, number):
             if res['meta']['code'] == 200:
                 for o in res['data']['otps']:
                     if o['number'] == number:
-                        bot.send_message(chat_id, f"🎊 **OTP RECEIVED!**\n\n📱 `{number}`\n💬 `{o['message']}`", parse_mode="Markdown")
+                        bot.send_message(chat_id, f"🎊 **OTP RECEIVED BY BSNUMBER!**\n\n📱 `{number}`\n💬 `{o['message']}`", parse_mode="Markdown")
                         return
             time.sleep(5)
         except: break
@@ -114,7 +116,11 @@ def start(message):
                types.InlineKeyboardButton("🛠 Admin Support", callback_data="admin"))
     markup.add(types.InlineKeyboardButton("💳 Add Fund", url="https://voltxsms.com"))
     
-    bot.send_message(message.chat.id, "🌟 **VOLTX SMS - Premium Bot** 🌟\nনিচের বাটন থেকে দ্রুত নম্বর নিন।", reply_markup=markup, parse_mode="Markdown")
+    bot.send_message(message.chat.id, 
+        "🌟 **Welcome to BSNUMBER Bot** 🌟\n\n"
+        "Facebook & Instagram ওটিপি-র জন্য সেরা সার্ভিস।\n"
+        "নিচের বাটন থেকে দ্রুত নম্বর সিলেক্ট করুন।", 
+        reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
@@ -126,7 +132,6 @@ def handle_callback(call):
 
         markup = types.InlineKeyboardMarkup(row_width=2)
         btns = []
-        # সচল দেশগুলো আগে দেখাবে
         for c_info, ranges in live_data.items():
             count = len(ranges)
             btn_text = f"{c_info} ({count})"
@@ -135,7 +140,7 @@ def handle_callback(call):
         markup.add(*btns)
         markup.add(types.InlineKeyboardButton("⬅️ Back Menu", callback_data="back_start"))
         
-        bot.edit_message_text("🌍 **Select Country (Live):**\nবর্তমানে নিচের দেশগুলোতে দ্রুত কোড আসছে:", 
+        bot.edit_message_text("🌍 **Select Country (Live First):**\nBSNUMBER-এ বর্তমানে সচল রেঞ্জগুলো:", 
                               call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
 
     elif call.data.startswith("list_"):
@@ -158,7 +163,7 @@ def handle_callback(call):
         if res['meta']['code'] == 200:
             num = res['data']['no_plus_number']
             msg = (f"✅ **Number Ready!**\n\n📱 `{num}`\n🌍 {res['data']['country']}\n\n"
-                   f"বট ওটিপি চেক করছে... কোড না আসলে 'Change' এ ক্লিক করুন।")
+                   f"বট ওটিপি চেক করছে... কোড না আসলে 'Change Number' ক্লিক করুন।")
             
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"order_{rid}"))
@@ -168,17 +173,17 @@ def handle_callback(call):
             bot.edit_message_text(msg, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
             threading.Thread(target=auto_check_otp, args=(call.message.chat.id, num)).start()
         else:
-            bot.answer_callback_query(call.id, "No Stock in this range!", show_alert=True)
+            bot.answer_callback_query(call.id, "No Stock! Try another range.", show_alert=True)
 
     elif call.data == "back_start":
         start(call.message)
 
     elif call.data == "admin":
-        bot.send_message(call.message.chat.id, f"🛠 **Admin Support:**\n\n👤 Admin: {ADMIN_HANDLE}\nID: `{ADMIN_ID}`")
+        bot.send_message(call.message.chat.id, f"🛠 **BSNUMBER Support:**\n\n👤 Admin: {ADMIN_HANDLE}\nID: `{ADMIN_ID}`")
 
     elif call.data == "profile":
         bot.answer_callback_query(call.id, "Profile feature under development!", show_alert=True)
 
 # Run
-print("Bot is Live with 150+ Countries and Colorful UI...")
+print("BSNUMBER Bot is Live...")
 bot.infinity_polling()
