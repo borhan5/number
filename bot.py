@@ -6,17 +6,27 @@ from threading import Thread
 # --- CONFIGURATION ---
 API_TOKEN = "8953289994:AAEpzTRZtGS-K3MBrVC2sT05r5sTb_n7mu8"
 VOLTX_KEY = "MQGVM5B5OOW"
+ADMIN_ID = 8250359361  # আপনার দেওয়া অ্যাডমিন আইডি
 GROUP_ID = -1003968881110 
-# দুটি লিঙ্কই এখানে রাখা হলো
-CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl" # আপনার আগের গ্রুপ লিঙ্ক
-METHOD_LINK = "https://t.me/earntrick_BS"       # আপনার নতুন দেওয়া লিঙ্ক
+CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl" 
+METHOD_LINK = "https://t.me/earntrick_BS"       
 
 BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
 WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg" 
 
 session = requests.Session()
 
-# COUNTRY DATA (অপরিবর্তিত - সব ডাটা রাখা হয়েছে)
+# --- USER DATABASE LOGIC ---
+def save_user(user_id):
+    if not os.path.exists("users.txt"):
+        with open("users.txt", "w") as f: f.write("")
+    with open("users.txt", "r") as f:
+        users = f.read().splitlines()
+    if str(user_id) not in users:
+        with open("users.txt", "a") as f:
+            f.write(f"{user_id}\n")
+
+# COUNTRY DATA
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -75,7 +85,6 @@ def detect_country(range_str):
 def monitor_otp(chat_id, number, svc):
     start_time = time.time()
     target_num = re.sub(r'\D', '', str(number))
-    
     while time.time() - start_time < 600:
         try:
             res = session.get(f"{BASE_URL}/success-otp", headers=get_headers(), timeout=5).json()
@@ -85,7 +94,6 @@ def monitor_otp(chat_id, number, svc):
                     if target_num == found_num:
                         msg = item['message']
                         display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
-                        
                         final_text = (
                             f"🎊 *CONGRATULATIONS! OTP RECEIVED* 🎊\n"
                             f"━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -96,7 +104,6 @@ def monitor_otp(chat_id, number, svc):
                             f"✅ *Verification Successful!*"
                         )
                         bot.send_message(chat_id, final_text, parse_mode="Markdown")
-                        
                         num_str = str(number)
                         length = len(num_str)
                         masked_num = num_str[:3] + "***" + num_str[-3:] if length > 6 else "***" + num_str[-2:]
@@ -105,10 +112,39 @@ def monitor_otp(chat_id, number, svc):
         except: pass
         time.sleep(3)
 
+# --- BROADCAST COMMAND ---
+@bot.message_handler(commands=['broadcast'])
+def broadcast(message):
+    if message.from_user.id == ADMIN_ID:
+        msg_text = message.text.replace("/broadcast ", "")
+        if msg_text == "/broadcast" or not msg_text:
+            bot.reply_to(message, "❌ সঠিক নিয়ম: `/broadcast আপনার মেসেজ`", parse_mode="Markdown")
+            return
+        
+        if not os.path.exists("users.txt"):
+            bot.reply_to(message, "❌ কোনো ইউজার ডেটা পাওয়া যায়নি।")
+            return
+
+        with open("users.txt", "r") as f:
+            users = f.read().splitlines()
+        
+        bot.send_message(message.chat.id, f"📡 {len(users)} জন ইউজারের কাছে পাঠানো শুরু হয়েছে...")
+        count = 0
+        for user in users:
+            try:
+                bot.send_message(user, msg_text)
+                count += 1
+                time.sleep(0.1) # টেলিগ্রাম ফ্লাড লিমিট এড়াতে
+            except: pass
+        bot.send_message(message.chat.id, f"✅ সফলভাবে {count} জনের কাছে পাঠানো হয়েছে।")
+    else:
+        bot.reply_to(message, "🚫 শুধুমাত্র অ্যাডমিন এই কমান্ড ব্যবহার করতে পারবে।")
+
 # --- HANDLERS ---
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
+    save_user(message.chat.id) # প্রতিবার স্টার্ট করলে আইডি সেভ হবে
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     markup.add(
         types.KeyboardButton("🚀 Get Number"), 
@@ -203,7 +239,6 @@ def query_handler(call):
                 
                 mk = types.InlineKeyboardMarkup(row_width=2)
                 mk.add(types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"buy_{svc}_{rid}"))
-                # এখানে দুটি বাটন পাশাপাশি দেওয়া হয়েছে
                 mk.add(
                     types.InlineKeyboardButton("📢 JOIN CHANNEL", url=CHANNEL_LINK),
                     types.InlineKeyboardButton("📖 METHOD GROUP", url=METHOD_LINK)
@@ -227,5 +262,5 @@ def query_handler(call):
 if __name__ == "__main__":
     keep_alive()
     bot.set_my_commands([types.BotCommand("start", "মূল মেনু")])
-    print("--- Premium Sync Bot is Live with Both Groups ---")
+    print("--- Premium Sync Bot is Live with Broadcast Feature ---")
     bot.infinity_polling(skip_pending=True)
