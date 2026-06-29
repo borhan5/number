@@ -13,13 +13,15 @@ BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
 ADMIN_ID = 8250359361
 ADMIN_HANDLE = "@BORHANSB" 
 
+# চ্যানেল ও মেথড লিঙ্ক (বাধ্যতামূলক জয়েন করার জন্য)
+METHOD_GROUP_ID = -1001859871146 # আপনার গ্রুপের সঠিক আইডি দিন (যেমন: -100...)
+METHOD_LINK = "https://t.me/earntrick_BS" # মেথড গ্রুপের পাবলিক লিঙ্ক
 CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
-METHOD_LINK = "https://t.me/earntrick_BS"
 
 bot = telebot.TeleBot(API_TOKEN)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- ১৫৫+ দেশের বিশাল ডাটাবেজ (আগের মতোই রাখা হয়েছে) ---
+# --- ১০০+ দেশের ডাটাবেজ (আগের মতোই) ---
 COUNTRY_DB = {
     "880": {"n": "Bangladesh", "f": "🇧🇩"}, "91": {"n": "India", "f": "🇮🇳"}, "1": {"n": "USA/Canada", "f": "🇺🇸"},
     "44": {"n": "UK", "f": "🇬🇧"}, "7": {"n": "Russia", "f": "🇷🇺"}, "62": {"n": "Indonesia", "f": "🇮🇩"},
@@ -39,36 +41,18 @@ COUNTRY_DB = {
     "32": {"n": "Belgium", "f": "🇧🇪"}, "46": {"n": "Sweden", "f": "🇸🇪"}, "52": {"n": "Mexico", "f": "🇲🇽"},
     "54": {"n": "Argentina", "f": "🇦🇷"}, "57": {"n": "Colombia", "f": "🇨🇴"}, "216": {"n": "Tunisia", "f": "🇹🇳"},
     "256": {"n": "Uganda", "f": "🇺🇬"}, "243": {"n": "DR Congo", "f": "🇨🇩"}, "244": {"n": "Angola", "f": "🇦🇴"},
-    "250": {"n": "Rwanda", "f": "🇷🇼"}, "252": {"n": "Somalia", "f": "🇸🇴"}, "82": {"n": "S. Korea", "f": "🇰🇷"},
-    "81": {"n": "Japan", "f": "🇯🇵"}, "65": {"n": "Singapore", "f": "🇸🇬"}, "61": {"n": "Australia", "f": "🇦🇺"},
-    "351": {"n": "Portugal", "f": "🇵🇹"}, "30": {"n": "Greece", "f": "🇬🇷"}, "353": {"n": "Ireland", "f": "🇮🇪"},
-    "41": {"n": "Switzerland", "f": "🇨🇭"}, "43": {"n": "Austria", "f": "🇦🇹"}, "45": {"n": "Denmark", "f": "🇩🇰"},
-    "47": {"n": "Norway", "f": "🇳🇴"}, "358": {"n": "Finland", "f": "🇫🇮"}, "372": {"n": "Estonia", "f": "🇪🇪"},
-    "371": {"n": "Latvia", "f": "🇱🇻"}, "370": {"n": "Lithuania", "f": "🇱🇹"}, "420": {"n": "Czechia", "f": "🇨🇿"},
-    "36": {"n": "Hungary", "f": "🇭🇺"}, "40": {"n": "Romania", "f": "🇷🇴"}, "359": {"n": "Bulgaria", "f": "🇧🇬"},
-    "381": {"n": "Serbia", "f": "🇷🇸"}, "385": {"n": "Croatia", "f": "🇭🇷"}, "386": {"n": "Slovenia", "f": "🇸🇮"},
-    "421": {"n": "Slovakia", "f": "🇸🇰"}, "354": {"n": "Iceland", "f": "🇮🇸"}, "356": {"n": "Malta", "f": "🇲🇹"},
-    "357": {"n": "Cyprus", "f": "🇨🇾"}, "972": {"n": "Israel", "f": "🇮🇱"}, "962": {"n": "Jordan", "f": "🇯🇴"},
-    "961": {"n": "Lebanon", "f": "🇱🇧"}, "965": {"n": "Kuwait", "f": "🇰🇼"}, "974": {"n": "Qatar", "f": "🇶🇦"},
-    "973": {"n": "Bahrain", "f": "🇧🇭"}, "968": {"n": "Oman", "f": "🇴🇲"}, "967": {"n": "Yemen", "f": "🇾🇪"},
-    "970": {"n": "Palestine", "f": "🇵🇸"}, "993": {"n": "Turkmenistan", "f": "🇹🇲"}, "992": {"n": "Tajikistan", "f": "🇹🇯"},
-    "996": {"n": "Kyrgyzstan", "f": "🇰🇬"}, "995": {"n": "Georgia", "f": "🇬🇪"}, "374": {"n": "Armenia", "f": "🇦🇲"},
-    "852": {"n": "Hong Kong", "f": "🇭🇰"}, "886": {"n": "Taiwan", "f": "🇹🇼"}, "853": {"n": "Macau", "f": "🇲🇴"},
-    "856": {"n": "Laos", "f": "🇱🇦"}, "975": {"n": "Bhutan", "f": "🇧🇹"}, "976": {"n": "Mongolia", "f": "🇲🇳"},
-    "64": {"n": "New Zealand", "f": "🇳🇿"}, "679": {"n": "Fiji", "f": "🇫🇯"}, "56": {"n": "Chile", "f": "🇨🇱"},
-    "51": {"n": "Peru", "f": "🇵🇪"}, "58": {"n": "Venezuela", "f": "🇻🇪"}, "593": {"n": "Ecuador", "f": "🇪🇨"},
-    "591": {"n": "Bolivia", "f": "🇧🇴"}, "595": {"n": "Paraguay", "f": "🇵🇾"}, "598": {"n": "Uruguay", "f": "🇺🇾"},
-    "502": {"n": "Guatemala", "f": "🇬🇹"}, "503": {"n": "El Salvador", "f": "🇸🇻"}, "504": {"n": "Honduras", "f": "🇭🇳"},
-    "505": {"n": "Nicaragua", "f": "🇳🇮"}, "506": {"n": "Costa Rica", "f": "🇨🇷"}, "507": {"n": "Panama", "f": "🇵🇦"},
-    "237": {"n": "Cameroon", "f": "🇨🇲"}, "241": {"n": "Gabon", "f": "🇬🇦"}, "221": {"n": "Senegal", "f": "🇸🇳"},
-    "231": {"n": "Liberia", "f": "🇱🇷"}, "232": {"n": "Sierra Leone", "f": "🇸🇱"}, "228": {"n": "Togo", "f": "🇹🇬"},
-    "227": {"n": "Niger", "f": "🇳🇪"}, "226": {"n": "Burkina Faso", "f": "🇧🇫"}, "213": {"n": "Algeria", "f": "🇩🇿"},
-    "218": {"n": "Libya", "f": "🇱🇾"}, "249": {"n": "Sudan", "f": "🇸🇩"}, "211": {"n": "South Sudan", "f": "🇸🇸"},
-    "254": {"n": "Kenya", "f": "🇰🇪"}, "256": {"n": "Uganda", "f": "🇺🇬"}, "257": {"n": "Burundi", "f": "🇧🇮"},
-    "258": {"n": "Mozambique", "f": "🇲🇿"}, "260": {"n": "Zambia", "f": "🇿🇲"}, "263": {"n": "Zimbabwe", "f": "🇿🇼"},
-    "264": {"n": "Namibia", "f": "🇳🇦"}, "267": {"n": "Botswana", "f": "🇧🇼"}, "266": {"n": "Lesotho", "f": "🇱🇸"},
-    "268": {"n": "Eswatini", "f": "🇸🇿"}
+    "250": {"n": "Rwanda", "f": "🇷🇼"}, "252": {"n": "Somalia", "f": "🇸🇴"}, "268": {"n": "Eswatini", "f": "🇸🇿"}
 }
+
+# --- FUNCTIONS ---
+
+def is_user_joined(user_id):
+    """ইউজার মেথড গ্রুপে জয়েন আছে কি না চেক করার ফাংশন"""
+    try:
+        status = bot.get_chat_member(METHOD_GROUP_ID, user_id).status
+        return status in ['member', 'administrator', 'creator']
+    except:
+        return True # কোনো এরর হলে বটের কাজ যেন বন্ধ না হয়
 
 def get_country_info(range_str):
     for length in [4, 3, 2, 1]:
@@ -110,6 +94,20 @@ def auto_check_otp(chat_id, number):
 
 @bot.message_handler(commands=['start'])
 def start(message):
+    user_id = message.from_user.id
+    
+    # Force Join Check
+    if not is_user_joined(user_id):
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("🚀 Join Our Method Group", url=METHOD_LINK))
+        markup.add(types.InlineKeyboardButton("✅ Joined (Check Again)", callback_data="check_joined"))
+        
+        bot.send_message(message.chat.id, 
+            "⚠️ **Access Denied!**\n\nবটটি ব্যবহার করতে হলে আপনাকে আমাদের মেথড গ্রুপে জয়েন থাকতে হবে।", 
+            reply_markup=markup)
+        return
+
+    # ইউজার জয়েন থাকলে মেইন মেনু দেখাবে
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.add(types.InlineKeyboardButton("🔥 Number Nin", callback_data="buy_menu"))
     markup.add(types.InlineKeyboardButton("👤 Profile", callback_data="profile"),
@@ -124,7 +122,21 @@ def start(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
-    if call.data == "buy_menu":
+    user_id = call.from_user.id
+
+    # বাটন ক্লিক করলেও জয়েন চেক হবে
+    if not is_user_joined(user_id) and call.data != "check_joined":
+        bot.answer_callback_query(call.id, "Please join the group first!", show_alert=True)
+        return
+
+    if call.data == "check_joined":
+        if is_user_joined(user_id):
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+            start(call.message)
+        else:
+            bot.answer_callback_query(call.id, "আপনি এখনো জয়েন করেননি! আগে জয়েন করুন।", show_alert=True)
+
+    elif call.data == "buy_menu":
         live_data = fetch_live_data()
         if not live_data:
             bot.answer_callback_query(call.id, "No Live Ranges Available!", show_alert=True)
@@ -185,5 +197,5 @@ def handle_callback(call):
         bot.answer_callback_query(call.id, "Profile feature under development!", show_alert=True)
 
 # Run
-print("BSNUMBER Bot is Live...")
+print("BSNUMBER Bot is Live with Force Join system...")
 bot.infinity_polling()
