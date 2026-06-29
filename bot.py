@@ -23,7 +23,7 @@ def keep_alive():
 # ---------------------------------------------------
 
 # --- CONFIGURATION ---
-API_TOKEN = "8953289994:AAHTZsMr1A-pkjeVfL6VZr3WwkqqvXCppSc"
+API_TOKEN = "8953289994:AAFJWdTzlcCHTt22U3pqcS73SuAFN7dpiWo"
 VOLTX_KEY = "MQGVM5B5OOW"
 BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
 
