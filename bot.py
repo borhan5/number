@@ -39,7 +39,7 @@ CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 bot = telebot.TeleBot(API_TOKEN)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- বিশ্বের প্রায় সব দেশের ডাটাবেজ (Full World Countries) ---
+# --- বিশ্বের প্রায় সব দেশের ডাটাবেজ ---
 COUNTRY_DB = {
     "1": {"n": "USA/Canada", "f": "🇺🇸"}, "7": {"n": "Russia/Kazakhstan", "f": "🇷🇺"}, "20": {"n": "Egypt", "f": "🇪🇬"},
     "27": {"n": "South Africa", "f": "🇿🇦"}, "30": {"n": "Greece", "f": "🇬🇷"}, "31": {"n": "Netherlands", "f": "🇳🇱"},
@@ -103,7 +103,6 @@ def is_user_joined(user_id):
     except: return True
 
 def mask_number(num_str):
-    """মাঝখানের ৩টি সংখ্যা হাইড করার ফাংশন"""
     if len(num_str) > 7:
         return f"{num_str[:5]}***{num_str[-3:]}"
     return num_str
@@ -117,7 +116,8 @@ def get_country_info(range_str):
 
 def fetch_live_data():
     try:
-        res = requests.get(f"{BASE_URL}/liveaccess", headers=headers).json()
+        # Timeout 10 added
+        res = requests.get(f"{BASE_URL}/liveaccess", headers=headers, timeout=10).json()
         live_stats = {}
         if res['meta']['code'] == 200:
             for service in res['data']['services']:
@@ -134,18 +134,17 @@ def auto_check_otp(chat_id, number, country_info):
     start_time = time.time()
     while time.time() - start_time < 300: # ৫ মিনিট চেক
         try:
-            res = requests.get(f"{BASE_URL}/success-otp", headers=headers).json()
+            # Timeout 10 added
+            res = requests.get(f"{BASE_URL}/success-otp", headers=headers, timeout=10).json()
             if res['meta']['code'] == 200:
                 for o in res['data']['otps']:
                     if o['number'] == number:
-                        # ইউজারের জন্য ফুল মেসেজ
                         full_msg = (f"🎊 **OTP RECEIVED BY BSNUMBER!**\n\n"
                                    f"🌍 Country: {country_info}\n"
                                    f"📱 Number: `{number}`\n"
                                    f"💬 Message: `{o['message']}`")
                         bot.send_message(chat_id, full_msg, parse_mode="Markdown")
                         
-                        # গ্রুপের জন্য মাস্ক মেসেজ (নম্বর হাইড)
                         masked_num = mask_number(number)
                         group_msg = (f"📢 **NEW OTP LOG (borhan otp)**\n\n"
                                     f"🌍 Country: {country_info}\n"
@@ -213,14 +212,14 @@ def handle_callback(call):
 
     elif call.data.startswith("order_"):
         rid = call.data.split("_")[1].replace("XXX", "")
-        res = requests.post(f"{BASE_URL}/getnum", headers=headers, json={"rid": rid}).json()
+        # Timeout 10 added
+        res = requests.post(f"{BASE_URL}/getnum", headers=headers, json={"rid": rid}, timeout=10).json()
         if res['meta']['code'] == 200:
             num = res['data']['no_plus_number']
             country = res['data']['country']
             msg = (f"✅ **Number Ready!**\n\n📱 `{num}`\n🌍 {country}\n\n"
                    f"বট ওটিপি চেক করছে... কোড না আসলে 'Change Number' ক্লিক করুন।")
             
-            # আপনার বাটনগুলো এখানে
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"order_{rid}"))
             markup.add(types.InlineKeyboardButton("👥 Group", url=CHANNEL_LINK),
@@ -241,4 +240,5 @@ def handle_callback(call):
 if __name__ == "__main__":
     keep_alive() 
     print("BSNUMBER Bot is starting...")
-    bot.infinity_polling()
+    # Timeout 10 set for polling
+    bot.infinity_polling(timeout=10, long_polling_timeout=10)
