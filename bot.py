@@ -17,7 +17,6 @@ WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg"
 session = requests.Session()
 bot = telebot.TeleBot(API_TOKEN)
 
-# লাইভ হিট হওয়া রেঞ্জ স্টোর করার সেট
 LIVE_HITTING_RANGES = set()
 
 # --- BACKGROUND CONSOLE SCANNER ---
@@ -29,7 +28,7 @@ def scan_public_console():
             if res.get('meta', {}).get('code') == 200:
                 for item in res['data'].get('otps', []):
                     num = str(item.get('number', ''))
-                    r_val = num[:6]
+                    r_val = num.replace('+', '')[:6] # প্লাস সরিয়ে রেঞ্জ নেওয়া
                     if len(r_val) >= 5:
                         LIVE_HITTING_RANGES.add(r_val)
                 if len(LIVE_HITTING_RANGES) > 40:
@@ -37,7 +36,6 @@ def scan_public_console():
         except: pass
         time.sleep(20)
 
-# --- USER DATABASE ---
 def save_user(user_id):
     if not os.path.exists("users.txt"):
         with open("users.txt", "w") as f: f.write("")
@@ -46,7 +44,6 @@ def save_user(user_id):
     if str(user_id) not in users:
         with open("users.txt", "a") as f: f.write(f"{user_id}\n")
 
-# --- ALL COUNTRIES DATA --- (আপনার সব দেশ এখানে আছে)
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -103,10 +100,11 @@ def monitor_otp(chat_id, number, svc):
                         original_msg = item['message']
                         masked_msg = re.sub(r'\d{4,8}', '******', original_msg)
                         
-                        bot.send_message(chat_id, f"🎊 *OTP RECEIVED*\n━━━━━━━━━━\n📱 `{number}`\n📩 `{original_msg}`", parse_mode="Markdown")
+                        # ওটিপি প্রাপ্তির মেসেজেও নম্বর ফরম্যাট ঠিক করা হয়েছে
+                        formatted_num = "+" + str(number).lstrip('+')
+                        bot.send_message(chat_id, f"🎊 *OTP RECEIVED*\n━━━━━━━━━━\n📱 `{formatted_num}`\n📩 `{original_msg}`", parse_mode="Markdown")
                         
-                        # আপনার গ্রুপের জন্য লগিং
-                        hidden_num = str(number)[:5] + "xxx" + str(number)[-2:]
+                        hidden_num = formatted_num[:6] + "xxx" + formatted_num[-2:]
                         bot.send_message(GROUP_ID, f"🔔 *[OTP LOG]*\nSvc: {svc}\nNum: `{hidden_num}`\nMsg: {masked_msg}")
                         return
         except: pass
@@ -150,7 +148,7 @@ def query_handler(call):
                 for s in res['data']['services']:
                     if s['sid'].lower() == svc.lower():
                         for r in s['ranges']:
-                            clean_r = r.replace("XXX", "")
+                            clean_r = r.replace("XXX", "").replace('+', '')
                             prefix = clean_r[:6]
                             is_hit = prefix in LIVE_HITTING_RANGES
                             if raw_svc == "LiveFB" and not is_hit: continue
@@ -172,7 +170,9 @@ def query_handler(call):
             if order.get('meta', {}).get('code') == 200:
                 num = order['data']['full_number']
                 
-                # --- এখানে আপনার বাটনগুলো অ্যাড করা হয়েছে ---
+                # নম্বর থেকে অতিরিক্ত প্লাস পরিষ্কার করে মাত্র একটি প্লাস রাখা হলো
+                formatted_num = "+" + str(num).lstrip('+')
+                
                 mk = types.InlineKeyboardMarkup(row_width=2)
                 mk.add(
                     types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"svc_{svc}"),
@@ -183,13 +183,13 @@ def query_handler(call):
                 order_text = (
                     f"✅ *NUMBER READY*\n"
                     f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                    f"📞 **Number:** `+{num}`\n"
+                    f"📞 **Number:** `{formatted_num}`\n"
                     f"⏳ **Status:** `Waiting for OTP...` 🌀\n"
                     f"━━━━━━━━━━━━━━━━━━━━━━"
                 )
                 
                 bot.edit_message_text(order_text, call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
-                Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
+                Thread(target=monitor_otp, args=(call.message.chat.id, formatted_num, svc)).start()
             else:
                 bot.send_message(call.message.chat.id, "❌ No Stock for this range.")
         except: pass
