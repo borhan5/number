@@ -6,7 +6,7 @@ from threading import Thread
 # --- CONFIGURATION ---
 API_TOKEN = "8953289994:AAEpzTRZtGS-K3MBrVC2sT05r5sTb_n7mu8"
 VOLTX_KEY = "MQGVM5B5OOW"
-ADMIN_ID = 8250359361  # আপনার দেওয়া অ্যাডমিন আইডি
+ADMIN_ID = 8250359361  
 GROUP_ID = -1003968881110 
 CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl" 
 METHOD_LINK = "https://t.me/earntrick_BS"       
@@ -16,17 +16,7 @@ WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg"
 
 session = requests.Session()
 
-# --- USER DATABASE LOGIC ---
-def save_user(user_id):
-    if not os.path.exists("users.txt"):
-        with open("users.txt", "w") as f: f.write("")
-    with open("users.txt", "r") as f:
-        users = f.read().splitlines()
-    if str(user_id) not in users:
-        with open("users.txt", "a") as f:
-            f.write(f"{user_id}\n")
-
-# COUNTRY DATA
+# --- সম্পূর্ণ কান্ট্রি লিস্ট (৬১+ দেশ) ---
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -62,18 +52,6 @@ COUNTRY_DATA = {
     "90": {"name": "Turkey", "flag": "🇹🇷"}, "966": {"name": "Saudi Arabia", "flag": "🇸🇦"}
 }
 
-bot = telebot.TeleBot(API_TOKEN)
-app = Flask('')
-
-@app.route('/')
-def home(): return "BOT STATUS: ACTIVE"
-
-def run():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
-
-def keep_alive(): Thread(target=run).start()
-
 def get_headers(): return {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
 def detect_country(range_str):
@@ -82,185 +60,96 @@ def detect_country(range_str):
         if p in COUNTRY_DATA: return p
     return None
 
-def monitor_otp(chat_id, number, svc):
-    start_time = time.time()
-    target_num = re.sub(r'\D', '', str(number))
-    while time.time() - start_time < 600:
-        try:
-            res = session.get(f"{BASE_URL}/success-otp", headers=get_headers(), timeout=5).json()
-            if res.get('meta', {}).get('code') == 200:
-                for item in res['data'].get('otps', []):
-                    found_num = re.sub(r'\D', '', str(item['number']))
-                    if target_num == found_num:
-                        msg = item['message']
-                        display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
-                        final_text = (
-                            f"🎊 *CONGRATULATIONS! OTP RECEIVED* 🎊\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"💠 *SERVICE:* `{display_svc.upper()}`\n"
-                            f"📱 *NUMBER:* `{number}`\n"
-                            f"📩 *MESSAGE:* `{msg}`\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"✅ *Verification Successful!*"
-                        )
-                        bot.send_message(chat_id, final_text, parse_mode="Markdown")
-                        num_str = str(number)
-                        length = len(num_str)
-                        masked_num = num_str[:3] + "***" + num_str[-3:] if length > 6 else "***" + num_str[-2:]
-                        bot.send_message(GROUP_ID, f"🔔 *[OTP LOG]*\nSvc: {svc}\nNum: `{masked_num}`\nMsg: {msg}")
-                        return
-        except: pass
-        time.sleep(3)
-
-# --- BROADCAST COMMAND ---
-@bot.message_handler(commands=['broadcast'])
-def broadcast(message):
-    if message.from_user.id == ADMIN_ID:
-        msg_text = message.text.replace("/broadcast ", "")
-        if msg_text == "/broadcast" or not msg_text:
-            bot.reply_to(message, "❌ সঠিক নিয়ম: `/broadcast আপনার মেসেজ`", parse_mode="Markdown")
-            return
-        
-        if not os.path.exists("users.txt"):
-            bot.reply_to(message, "❌ কোনো ইউজার ডেটা পাওয়া যায়নি।")
-            return
-
-        with open("users.txt", "r") as f:
-            users = f.read().splitlines()
-        
-        bot.send_message(message.chat.id, f"📡 {len(users)} জন ইউজারের কাছে পাঠানো শুরু হয়েছে...")
-        count = 0
-        for user in users:
-            try:
-                bot.send_message(user, msg_text)
-                count += 1
-                time.sleep(0.1) # টেলিগ্রাম ফ্লাড লিমিট এড়াতে
-            except: pass
-        bot.send_message(message.chat.id, f"✅ সফলভাবে {count} জনের কাছে পাঠানো হয়েছে।")
-    else:
-        bot.reply_to(message, "🚫 শুধুমাত্র অ্যাডমিন এই কমান্ড ব্যবহার করতে পারবে।")
-
-# --- HANDLERS ---
+bot = telebot.TeleBot(API_TOKEN)
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
-    save_user(message.chat.id) # প্রতিবার স্টার্ট করলে আইডি সেভ হবে
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    markup.add(
-        types.KeyboardButton("🚀 Get Number"), 
-        types.KeyboardButton("💎 My Balance"),
-        types.KeyboardButton("📖 Method")
-    )
-    
-    welcome_text = (
-        f"👋 *Welcome to Premium OTP Bot*\n\n"
-        f"💠 *Status:* `Active` 🟢\n"
-        f"💠 *Mode:* `Sync (FB/Insta/WA)`\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"নিচের মেনু থেকে আপনার কাঙ্ক্ষিত সার্ভিসটি সিলেক্ট করুন এবং দ্রুত OTP গ্রহণ করুন।\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━"
-    )
-    try:
-        bot.send_photo(message.chat.id, WELCOME_IMAGE, caption=welcome_text, reply_markup=markup, parse_mode="Markdown")
-    except:
-        bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
-
-@bot.message_handler(func=lambda message: message.text == "📖 Method")
-def method_handler(message):
-    mk = types.InlineKeyboardMarkup(row_width=1)
-    mk.add(
-        types.InlineKeyboardButton("📢 Join Main Channel", url=CHANNEL_LINK),
-        types.InlineKeyboardButton("📖 Join Method Group", url=METHOD_LINK)
-    )
-    bot.send_message(message.chat.id, "📑 *আমাদের সাপোর্ট এবং মেথড লিংক সমূহ:*", reply_markup=mk, parse_mode="Markdown")
-
-@bot.message_handler(func=lambda message: message.text in ["💎 My Balance", "💰 Balance"])
-def balance_handler(message):
-    try:
-        res = session.get(f"{BASE_URL}/user-balance", headers=get_headers()).json()
-        if res.get('meta', {}).get('code') == 200:
-            bal = res['data']['balance']
-            bal_text = (
-                f"💳 *WALLET INFORMATION*\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"👤 *User:* `{message.from_user.first_name}`\n"
-                f"💰 *Balance:* `{bal} BDT`\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━"
-            )
-            bot.send_message(message.chat.id, bal_text, parse_mode="Markdown")
-    except:
-        bot.send_message(message.chat.id, "❌ সার্ভার সমস্যা।")
+    markup.add(types.KeyboardButton("🚀 Get Number"), types.KeyboardButton("💎 My Balance"))
+    bot.send_message(message.chat.id, "👋 *Welcome to New FB Console Bot*\n\nএটি সরাসরি লাইভ কনসোল থেকে `➜<#>` ফরম্যাটের কোড আসা রেঞ্জগুলো খুঁজে বের করবে।", reply_markup=markup, parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.text == "🚀 Get Number")
 def service_menu(message):
     mk = types.InlineKeyboardMarkup(row_width=1)
     mk.add(
-        types.InlineKeyboardButton("📘 FACEBOOK / 📸 INSTAGRAM", callback_data="svc_Facebook"),
+        types.InlineKeyboardButton("🆕 NEW FACEBOOK (Live Hits) 🔥", callback_data="svc_LiveFB"),
+        types.InlineKeyboardButton("📘 FACEBOOK (Normal)", callback_data="svc_Facebook"),
         types.InlineKeyboardButton("💬 WHATSAPP BUSINESS", callback_data="svc_WhatsApp")
     )
     bot.send_message(message.chat.id, "🛠 *সার্ভিস সিলেক্ট করুন:*", reply_markup=mk, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: True)
 def query_handler(call):
-    if call.data.startswith("svc_"):
+    # --- স্পেশাল নিউ ফেসবুক লজিক (➜<#> ফিল্টার) ---
+    if call.data == "svc_LiveFB":
+        bot.answer_callback_query(call.id, "Filtering ➜<#> Format...")
+        try:
+            res = session.get(f"{BASE_URL}/console", headers=get_headers()).json()
+            if res.get('meta', {}).get('code') == 200:
+                hits = res['data'].get('hits', [])
+                fresh_ranges = []
+                seen = set()
+                
+                for hit in hits:
+                    msg = hit.get('message', '')
+                    # এখানে আপনার দেওয়া সেই নির্দিষ্ট ফরম্যাটটি চেক করা হচ্ছে
+                    if "➜<#>" in msg and "is your Facebook code" in msg:
+                        r = hit['range']
+                        if r not in seen:
+                            fresh_ranges.append(r)
+                            seen.add(r)
+                
+                if not fresh_ranges:
+                    bot.send_message(call.message.chat.id, "❌ বর্তমানে কনসোলে `➜<#>` ফরম্যাটের কোনো ফেসবুক হিট নেই।")
+                    return
+
+                mk = types.InlineKeyboardMarkup(row_width=1)
+                for r in fresh_ranges[:12]:
+                    c_code = detect_country(r)
+                    c = COUNTRY_DATA.get(c_code, {"name": "Unknown", "flag": "🌍"})
+                    clean_rid = r.replace("XXX", "")
+                    mk.add(types.InlineKeyboardButton(f"🔥 {c['flag']} {c['name']} (Range: {clean_rid})", callback_data=f"buy_Facebook_{clean_rid}"))
+                
+                bot.edit_message_text("✅ *NEW FB SPECIAL RANGES*\nএই রেঞ্জগুলোতে বর্তমানে `➜<#>` কোড আসছে:", 
+                                     call.message.chat.id, call.message.message_id, reply_markup=mk, parse_mode="Markdown")
+        except: pass
+
+    # --- অন্যান্য সার্ভিস ---
+    elif call.data.startswith("svc_"):
         svc = call.data.split("_")[1]
         try:
             res = session.get(f"{BASE_URL}/liveaccess", headers=get_headers()).json()
             if res.get('meta', {}).get('code') == 200:
                 mk = types.InlineKeyboardMarkup(row_width=1)
-                sync_list = []
                 for s in res['data']['services']:
                     if s['sid'].lower() == svc.lower():
-                        for r in s['ranges']:
+                        for r in s['ranges'][:15]:
                             c_code = detect_country(r)
-                            if c_code: sync_list.append((c_code, r))
-                
-                if not sync_list:
-                    bot.answer_callback_query(call.id, "❌ No stock!")
-                    return
-
-                for code, rid in sync_list[:12]:
-                    c = COUNTRY_DATA[code]
-                    clean_rid = rid.replace("XXX", "")
-                    mk.add(types.InlineKeyboardButton(f"{c['flag']} {c['name']} (Range: {clean_rid})", callback_data=f"buy_{svc}_{clean_rid}"))
-                
-                bot.edit_message_text(f"🌍 *{svc} Global Stock*\nরেঞ্জ সিলেক্ট করুন:", 
-                                     call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+                            c = COUNTRY_DATA.get(c_code, {"name": "Unknown", "flag": "🌍"})
+                            clean_rid = r.replace("XXX", "")
+                            mk.add(types.InlineKeyboardButton(f"{c['flag']} {c['name']} ({clean_rid})", callback_data=f"buy_{svc}_{clean_rid}"))
+                bot.edit_message_text(f"🌍 *{svc} Stock*", call.message.chat.id, call.message.message_id, reply_markup=mk, parse_mode="Markdown")
         except: pass
 
+    # --- নাম্বার কেনা ---
     elif call.data.startswith("buy_"):
         _, svc, rid = call.data.split("_")
-        bot.answer_callback_query(call.id, "⚡ Number Allocating...")
-        
+        bot.answer_callback_query(call.id, "Allocating...")
         try:
             order = session.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=get_headers()).json()
             if order.get('meta', {}).get('code') == 200:
                 num = order['data']['full_number']
-                
-                mk = types.InlineKeyboardMarkup(row_width=2)
-                mk.add(types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"buy_{svc}_{rid}"))
-                mk.add(
-                    types.InlineKeyboardButton("📢 JOIN CHANNEL", url=CHANNEL_LINK),
-                    types.InlineKeyboardButton("📖 METHOD GROUP", url=METHOD_LINK)
-                )
-                
-                order_text = (
-                    f"✅ *NUMBER READY*\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                    f"📞 *Number:* `{num}`\n"
-                    f"🛠 *Service:* `{svc}`\n"
-                    f"⏳ *Status:* `Waiting for OTP...` 🌀\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━"
-                )
-                
-                bot.edit_message_text(order_text, call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
-                Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
+                bot.send_message(call.message.chat.id, f"✅ *Number:* `{num}`\n🛠 *Svc:* {svc}\n🌀 *Status:* Waiting for OTP...", parse_mode="Markdown")
             else:
-                bot.send_message(call.message.chat.id, "❌ No Stock or Balance.")
+                bot.send_message(call.message.chat.id, "❌ Stock Out!")
         except: pass
 
+# --- SERVER ---
+app = Flask('')
+@app.route('/')
+def home(): return "RUNNING"
+def run(): app.run(host='0.0.0.0', port=8080)
+
 if __name__ == "__main__":
-    keep_alive()
-    bot.set_my_commands([types.BotCommand("start", "মূল মেনু")])
-    print("--- Premium Sync Bot is Live with Broadcast Feature ---")
-    bot.infinity_polling(skip_pending=True)
+    Thread(target=run).start()
+    bot.infinity_polling()
