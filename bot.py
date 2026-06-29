@@ -1,266 +1,117 @@
-import os, requests, telebot, re, time
+import telebot
+import requests
+import time
 from telebot import types
-from flask import Flask
-from threading import Thread
 
-# --- CONFIGURATION ---
+# --- আপনার দেওয়া কনফিগুরেশন ---
 API_TOKEN = "8953289994:AAFFdFTn4g-UJKKispB6_qFW5vbJI1KmAbc"
 VOLTX_KEY = "MQGVM5B5OOW"
-ADMIN_ID = 8250359361  # আপনার দেওয়া অ্যাডমিন আইডি
+ADMIN_ID = 8250359361
 GROUP_ID = -1003968881110 
-CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl" 
-METHOD_LINK = "https://t.me/earntrick_BS"       
+CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl" # প্রাইভেট লিঙ্কের ক্ষেত্রে চ্যানেলের ইউজারনেম বা আইডি চেক করতে হবে
+CHANNEL_USERNAME = "@earntrick_BS" # উদাহরণস্বরূপ, চ্যানেলের ইউজারনেম দিন (শুরুতে @ দিয়ে)
+METHOD_LINK = "https://t.me/earntrick_BS"
 
-BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
-WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg" 
-
-session = requests.Session()
-
-# --- USER DATABASE LOGIC ---
-def save_user(user_id):
-    if not os.path.exists("users.txt"):
-        with open("users.txt", "w") as f: f.write("")
-    with open("users.txt", "r") as f:
-        users = f.read().splitlines()
-    if str(user_id) not in users:
-        with open("users.txt", "a") as f:
-            f.write(f"{user_id}\n")
-
-# COUNTRY DATA
-COUNTRY_DATA = {
-    "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
-    "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
-    "212": {"name": "Morocco", "flag": "🇲🇦"}, "213": {"name": "Algeria", "flag": "🇩🇿"},
-    "216": {"name": "Tunisia", "flag": "🇹🇳"}, "218": {"name": "Libya", "flag": "🇱🇾"},
-    "220": {"name": "Gambia", "flag": "🇬🇲"}, "221": {"name": "Senegal", "flag": "🇸🇳"},
-    "222": {"name": "Mauritania", "flag": "🇲🇷"}, "223": {"name": "Mali", "flag": "🇲🇱"},
-    "224": {"name": "Guinea", "flag": "🇬🇳"}, "225": {"name": "Ivory Coast", "flag": "🇨🇮"},
-    "226": {"name": "Burkina Faso", "flag": "🇧🇫"}, "227": {"name": "Niger", "flag": "🇳🇪"},
-    "228": {"name": "Togo", "flag": "🇹🇬"}, "229": {"name": "Benin", "flag": "🇧🇯"},
-    "230": {"name": "Mauritius", "flag": "🇲🇺"}, "231": {"name": "Liberia", "flag": "🇱🇷"},
-    "232": {"name": "Sierra Leone", "flag": "🇸🇱"}, "233": {"name": "Ghana", "flag": "🇬🇭"},
-    "234": {"name": "Nigeria", "flag": "🇳🇬"}, "235": {"name": "Chad", "flag": "🇹🇩"},
-    "236": {"name": "Central Africa", "flag": "🇨🇫"}, "237": {"name": "Cameroon", "flag": "🇨🇲"},
-    "238": {"name": "Cape Verde", "flag": "🇨🇻"}, "239": {"name": "Sao Tome", "flag": "🇸🇹"},
-    "240": {"name": "Equat. Guinea", "flag": "🇬🇶"}, "241": {"name": "Gabon", "flag": "🇬🇦"},
-    "242": {"name": "Congo", "flag": "🇨🇬"}, "243": {"name": "DR Congo", "flag": "🇨🇩"},
-    "244": {"name": "Angola", "flag": "🇦🇴"}, "245": {"name": "Guinea-Bissau", "flag": "🇬🇼"},
-    "248": {"name": "Seychelles", "flag": "🇸🇨"}, "249": {"name": "Sudan", "flag": "🇸🇩"},
-    "250": {"name": "Rwanda", "flag": "🇷🇼"}, "251": {"name": "Ethiopia", "flag": "🇪🇹"},
-    "252": {"name": "Somalia", "flag": "🇸🇴"}, "253": {"name": "Djibouti", "flag": "🇩🇯"},
-    "254": {"name": "Kenya", "flag": "🇰🇪"}, "255": {"name": "Tanzania", "flag": "🇹🇿"},
-    "256": {"name": "Uganda", "flag": "🇺🇬"}, "257": {"name": "Burundi", "flag": "🇧🇮"},
-    "258": {"name": "Mozambique", "flag": "🇲🇿"}, "260": {"name": "Zambia", "flag": "🇿🇲"},
-    "261": {"name": "Madagascar", "flag": "🇲🇬"}, "262": {"name": "Reunion", "flag": "🇷🇪"},
-    "263": {"name": "Zimbabwe", "flag": "🇿🇼"}, "264": {"name": "Namibia", "flag": "🇳🇦"},
-    "265": {"name": "Malawi", "flag": "🇲🇼"}, "266": {"name": "Lesotho", "flag": "🇱🇸"},
-    "267": {"name": "Botswana", "flag": "🇧🇼"}, "268": {"name": "Eswatini", "flag": "🇸🇿"},
-    "269": {"name": "Comoros", "flag": "🇰🇲"}, "27": {"name": "South Africa", "flag": "🇿🇦"},
-    "880": {"name": "Bangladesh", "flag": "🇧🇩"}, "91": {"name": "India", "flag": "🇮🇳"},
-    "92": {"name": "Pakistan", "flag": "🇵🇰"}, "62": {"name": "Indonesia", "flag": "🇮🇩"},
-    "84": {"name": "Vietnam", "flag": "🇻🇳"}, "63": {"name": "Philippines", "flag": "🇵🇭"},
-    "90": {"name": "Turkey", "flag": "🇹🇷"}, "966": {"name": "Saudi Arabia", "flag": "🇸🇦"}
-}
+# VoltxSMS API Base URL (সাধারণত এই ফরম্যাটে থাকে)
+VOLTX_API_URL = "https://voltxsms.com/stubs/handler_api.php"
 
 bot = telebot.TeleBot(API_TOKEN)
-app = Flask('')
 
-@app.route('/')
-def home(): return "BOT STATUS: ACTIVE"
+# --- মেম্বারশিপ চেক ফাংশন ---
+def is_subscribed(user_id):
+    try:
+        # দ্রষ্টব্য: বটকে অবশ্যই ওই চ্যানেলের অ্যাডমিন হতে হবে
+        status = bot.get_chat_member(CHANNEL_USERNAME, user_id).status
+        return status in ['member', 'administrator', 'creator']
+    except:
+        # যদি ইউজারনেম কাজ না করে তবে আপাতত True রিটার্ন করবে (বটকে অ্যাডমিন করলে কাজ করবে)
+        return True 
 
-def run():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
-
-def keep_alive(): Thread(target=run).start()
-
-def get_headers(): return {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
-
-def detect_country(range_str):
-    for length in [3, 2, 1]:
-        p = range_str[:length]
-        if p in COUNTRY_DATA: return p
-    return None
-
-def monitor_otp(chat_id, number, svc):
-    start_time = time.time()
-    target_num = re.sub(r'\D', '', str(number))
-    while time.time() - start_time < 600:
-        try:
-            res = session.get(f"{BASE_URL}/success-otp", headers=get_headers(), timeout=5).json()
-            if res.get('meta', {}).get('code') == 200:
-                for item in res['data'].get('otps', []):
-                    found_num = re.sub(r'\D', '', str(item['number']))
-                    if target_num == found_num:
-                        msg = item['message']
-                        display_svc = "Facebook/Instagram" if svc == "Facebook" else svc
-                        final_text = (
-                            f"🎊 *CONGRATULATIONS! OTP RECEIVED* 🎊\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"💠 *SERVICE:* `{display_svc.upper()}`\n"
-                            f"📱 *NUMBER:* `{number}`\n"
-                            f"📩 *MESSAGE:* `{msg}`\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"✅ *Verification Successful!*"
-                        )
-                        bot.send_message(chat_id, final_text, parse_mode="Markdown")
-                        num_str = str(number)
-                        length = len(num_str)
-                        masked_num = num_str[:3] + "***" + num_str[-3:] if length > 6 else "***" + num_str[-2:]
-                        bot.send_message(GROUP_ID, f"🔔 *[OTP LOG]*\nSvc: {svc}\nNum: `{masked_num}`\nMsg: {msg}")
-                        return
-        except: pass
-        time.sleep(3)
-
-# --- BROADCAST COMMAND ---
-@bot.message_handler(commands=['broadcast'])
-def broadcast(message):
-    if message.from_user.id == ADMIN_ID:
-        msg_text = message.text.replace("/broadcast ", "")
-        if msg_text == "/broadcast" or not msg_text:
-            bot.reply_to(message, "❌ সঠিক নিয়ম: `/broadcast আপনার মেসেজ`", parse_mode="Markdown")
-            return
-        
-        if not os.path.exists("users.txt"):
-            bot.reply_to(message, "❌ কোনো ইউজার ডেটা পাওয়া যায়নি।")
-            return
-
-        with open("users.txt", "r") as f:
-            users = f.read().splitlines()
-        
-        bot.send_message(message.chat.id, f"📡 {len(users)} জন ইউজারের কাছে পাঠানো শুরু হয়েছে...")
-        count = 0
-        for user in users:
-            try:
-                bot.send_message(user, msg_text)
-                count += 1
-                time.sleep(0.1) # টেলিগ্রাম ফ্লাড লিমিট এড়াতে
-            except: pass
-        bot.send_message(message.chat.id, f"✅ সফলভাবে {count} জনের কাছে পাঠানো হয়েছে।")
-    else:
-        bot.reply_to(message, "🚫 শুধুমাত্র অ্যাডমিন এই কমান্ড ব্যবহার করতে পারবে।")
-
-# --- HANDLERS ---
+# --- মেইন মেনু ---
+def main_menu():
+    markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    btn1 = types.KeyboardButton("💰 ব্যালেন্স চেক")
+    btn2 = types.KeyboardButton("📱 নম্বর কিনুন")
+    btn3 = types.KeyboardButton("📖 মেথড দেখুন")
+    btn4 = types.KeyboardButton("👨‍💻 সাপোর্ট")
+    markup.add(btn1, btn2, btn3, btn4)
+    return markup
 
 @bot.message_handler(commands=['start'])
-def start_handler(message):
-    save_user(message.chat.id) # প্রতিবার স্টার্ট করলে আইডি সেভ হবে
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    markup.add(
-        types.KeyboardButton("🚀 Get Number"), 
-        types.KeyboardButton("💎 My Balance"),
-        types.KeyboardButton("📖 Method")
-    )
-    
-    welcome_text = (
-        f"👋 *Welcome to Premium OTP Bot*\n\n"
-        f"💠 *Status:* `Active` 🟢\n"
-        f"💠 *Mode:* `Sync (FB/Insta/WA)`\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"নিচের মেনু থেকে আপনার কাঙ্ক্ষিত সার্ভিসটি সিলেক্ট করুন এবং দ্রুত OTP গ্রহণ করুন।\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━"
-    )
-    try:
-        bot.send_photo(message.chat.id, WELCOME_IMAGE, caption=welcome_text, reply_markup=markup, parse_mode="Markdown")
-    except:
-        bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
+def start(message):
+    if not is_subscribed(message.from_user.id):
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("চ্যানেলে জয়েন করুন", url=CHANNEL_LINK))
+        bot.send_message(message.chat.id, "❌ আপনাকে প্রথমে আমাদের চ্যানেলে জয়েন করতে হবে। জয়েন করে আবার /start লিখুন।", reply_markup=markup)
+        return
 
-@bot.message_handler(func=lambda message: message.text == "📖 Method")
-def method_handler(message):
-    mk = types.InlineKeyboardMarkup(row_width=1)
-    mk.add(
-        types.InlineKeyboardButton("📢 Join Main Channel", url=CHANNEL_LINK),
-        types.InlineKeyboardButton("📖 Join Method Group", url=METHOD_LINK)
-    )
-    bot.send_message(message.chat.id, "📑 *আমাদের সাপোর্ট এবং মেথড লিংক সমূহ:*", reply_markup=mk, parse_mode="Markdown")
+    bot.send_message(message.chat.id, "স্বাগতম! VoltxSMS বট দিয়ে আপনি সহজেই ওটিপি নম্বর নিতে পারবেন।", reply_markup=main_menu())
 
-@bot.message_handler(func=lambda message: message.text in ["💎 My Balance", "💰 Balance"])
-def balance_handler(message):
-    try:
-        res = session.get(f"{BASE_URL}/user-balance", headers=get_headers()).json()
-        if res.get('meta', {}).get('code') == 200:
-            bal = res['data']['balance']
-            bal_text = (
-                f"💳 *WALLET INFORMATION*\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"👤 *User:* `{message.from_user.first_name}`\n"
-                f"💰 *Balance:* `{bal} BDT`\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━"
-            )
-            bot.send_message(message.chat.id, bal_text, parse_mode="Markdown")
-    except:
-        bot.send_message(message.chat.id, "❌ সার্ভার সমস্যা।")
+@bot.message_handler(func=lambda message: True)
+def handle_messages(message):
+    if message.text == "💰 ব্যালেন্স চেক":
+        response = requests.get(f"{VOLTX_API_URL}?api_key={VOLTX_KEY}&action=getBalance")
+        if "ACCESS_BALANCE" in response.text:
+            balance = response.text.split(":")[1]
+            bot.reply_to(message, f"✅ আপনার বর্তমান ব্যালেন্স: {balance} টাকা")
+        else:
+            bot.reply_to(message, "❌ ব্যালেন্স চেক করতে সমস্যা হচ্ছে।")
 
-@bot.message_handler(func=lambda message: message.text == "🚀 Get Number")
-def service_menu(message):
-    mk = types.InlineKeyboardMarkup(row_width=1)
-    mk.add(
-        types.InlineKeyboardButton("📘 FACEBOOK / 📸 INSTAGRAM", callback_data="svc_Facebook"),
-        types.InlineKeyboardButton("💬 WHATSAPP BUSINESS", callback_data="svc_WhatsApp")
-    )
-    bot.send_message(message.chat.id, "🛠 *সার্ভিস সিলেক্ট করুন:*", reply_markup=mk, parse_mode="Markdown")
+    elif message.text == "📖 মেথড দেখুন":
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("মেথড লিঙ্ক", url=METHOD_LINK))
+        bot.send_message(message.chat.id, "নিচের লিঙ্কে ক্লিক করে মেথডটি দেখে নিন:", reply_markup=markup)
 
+    elif message.text == "📱 নম্বর কিনুন":
+        # সার্ভিস লিস্ট (উদাহরণস্বরূপ Telegram, WhatsApp)
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("Telegram", callback_data="buy_tg"))
+        markup.add(types.InlineKeyboardButton("WhatsApp", callback_data="buy_wa"))
+        bot.send_message(message.chat.id, "কোন সার্ভিসের নম্বর নিতে চান?", reply_markup=markup)
+
+    elif message.text == "👨‍💻 সাপোর্ট":
+        bot.send_message(message.chat.id, f"যেকোনো সমস্যায় অ্যাডমিনের সাথে যোগাযোগ করুন: [অ্যাডমিন আইডি](tg://user?id={ADMIN_ID})", parse_mode="Markdown")
+
+# --- কলব্যাক হ্যান্ডলার (নম্বর কেনা) ---
 @bot.callback_query_handler(func=lambda call: True)
-def query_handler(call):
-    if call.data.startswith("svc_"):
-        svc = call.data.split("_")[1]
-        try:
-            res = session.get(f"{BASE_URL}/liveaccess", headers=get_headers()).json()
-            if res.get('meta', {}).get('code') == 200:
-                mk = types.InlineKeyboardMarkup(row_width=1)
-                sync_list = []
-                for s in res['data']['services']:
-                    if s['sid'].lower() == svc.lower():
-                        for r in s['ranges']:
-                            c_code = detect_country(r)
-                            if c_code: sync_list.append((c_code, r))
-                
-                if not sync_list:
-                    bot.answer_callback_query(call.id, "❌ No stock!")
-                    return
-
-                for code, rid in sync_list[:12]:
-                    c = COUNTRY_DATA[code]
-                    clean_rid = rid.replace("XXX", "")
-                    mk.add(types.InlineKeyboardButton(f"{c['flag']} {c['name']} (Range: {clean_rid})", callback_data=f"buy_{svc}_{clean_rid}"))
-                
-                bot.edit_message_text(f"🌍 *{svc} Global Stock*\nরেঞ্জ সিলেক্ট করুন:", 
-                                     call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
-        except: pass
-
-    elif call.data.startswith("buy_"):
-        _, svc, rid = call.data.split("_")
-        bot.answer_callback_query(call.id, "⚡ Number Allocating...")
+def callback_query(call):
+    if call.data == "buy_tg":
+        service = "tg" # Telegram service code
+        country = "0"  # 0 = Russia, 1 = Ukraine (VoltxSMS এর কান্ট্রি কোড অনুযায়ী পরিবর্তন করুন)
         
-        try:
-            order = session.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=get_headers()).json()
-            if order.get('meta', {}).get('code') == 200:
-                num = order['data']['full_number']
-                
-                mk = types.InlineKeyboardMarkup(row_width=2)
-                mk.add(types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"buy_{svc}_{rid}"))
-                mk.add(
-                    types.InlineKeyboardButton("📢 JOIN CHANNEL", url=CHANNEL_LINK),
-                    types.InlineKeyboardButton("📖 METHOD GROUP", url=METHOD_LINK)
-                )
-                
-                order_text = (
-                    f"✅ *NUMBER READY*\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                    f"📞 *Number:* `{num}`\n"
-                    f"🛠 *Service:* `{svc}`\n"
-                    f"⏳ *Status:* `Waiting for OTP...` 🌀\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━"
-                )
-                
-                bot.edit_message_text(order_text, call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
-                Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
-            else:
-                bot.send_message(call.message.chat.id, "❌ No Stock or Balance.")
-        except: pass
+        # নম্বর রিকোয়েস্ট
+        res = requests.get(f"{VOLTX_API_URL}?api_key={VOLTX_KEY}&action=getNumber&service={service}&country={country}")
+        
+        if "ACCESS_NUMBER" in res.text:
+            # ফরম্যাট: ACCESS_NUMBER:ID:NUMBER
+            _, order_id, phone = res.text.split(":")
+            
+            msg_text = f"📱 নম্বর: `{phone}`\n🆔 অর্ডার আইডি: `{order_id}`\n\nওটিপি-র জন্য অপেক্ষা করুন..."
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton("ওটিপি চেক করুন", callback_data=f"get_otp_{order_id}"))
+            markup.add(types.InlineKeyboardButton("বাতিল করুন", callback_data=f"cancel_{order_id}"))
+            
+            bot.edit_message_text(msg_text, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
+        else:
+            bot.answer_callback_query(call.id, "❌ এই মুহূর্তে নম্বর নেই।")
 
-if __name__ == "__main__":
-    keep_alive()
-    bot.set_my_commands([types.BotCommand("start", "মূল মেনু")])
-    print("--- Premium Sync Bot is Live with Broadcast Feature ---")
-    bot.infinity_polling(skip_pending=True)
+    elif call.data.startswith("get_otp_"):
+        order_id = call.data.split("_")[2]
+        res = requests.get(f"{VOLTX_API_URL}?api_key={VOLTX_KEY}&action=getStatus&id={order_id}")
+        
+        if "STATUS_OK" in res.text:
+            otp = res.text.split(":")[1]
+            bot.send_message(call.message.chat.id, f"✅ আপনার ওটিপি হলো: `{otp}`", parse_mode="Markdown")
+        elif "STATUS_WAIT_CODE" in res.text:
+            bot.answer_callback_query(call.id, "⏳ ওটিপি এখনো আসেনি, দয়া করে অপেক্ষা করুন।", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, f"অবস্থা: {res.text}")
+
+    elif call.data.startswith("cancel_"):
+        order_id = call.data.split("_")[1]
+        # স্ট্যাটাস ৮ মানে অর্ডার ক্যান্সেল/কমপ্লিট
+        requests.get(f"{VOLTX_API_URL}?api_key={VOLTX_KEY}&action=setStatus&id={order_id}&status=8")
+        bot.edit_message_text("❌ নম্বরটি বাতিল করা হয়েছে।", call.message.chat.id, call.message.message_id)
+
+print("Bot is running...")
+bot.polling()
