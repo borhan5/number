@@ -6,7 +6,7 @@ import time
 from telebot import types
 from flask import Flask
 
-# --- RENDER-এর জন্য ছোট একটি ওয়েব সার্ভার (যাতে বট বন্ধ না হয়) ---
+# --- RENDER FIX (এই অংশটুকু ছাড়া Render-এ বট চলবে না) ---
 app = Flask('')
 
 @app.route('/')
@@ -14,25 +14,22 @@ def home():
     return "BSNUMBER Bot is Live!"
 
 def run_web_server():
-    # Render অটোমেটিক PORT ভ্যারিয়েবল দেয়, না থাকলে ৮০৮০ ব্যবহার করবে
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
 def keep_alive():
     t = threading.Thread(target=run_web_server)
     t.start()
-# ---------------------------------------------------------
+# ---------------------------------------------------
 
 # --- CONFIGURATION ---
 API_TOKEN = "8953289994:AAENyenhy1NmI55_CZgLFUs4POgaXOUDqxE"
 VOLTX_KEY = "MQGVM5B5OOW"
 BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
 
-# অ্যাডমিন তথ্য
 ADMIN_ID = 8250359361
 ADMIN_HANDLE = "@BORHANSB" 
 
-# চ্যানেল ও মেথড লিঙ্ক
 METHOD_GROUP_ID = -1001859871146 
 METHOD_LINK = "https://t.me/earntrick_BS" 
 CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
@@ -40,7 +37,7 @@ CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 bot = telebot.TeleBot(API_TOKEN)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- আপনার দেওয়া ১০০+ দেশের সম্পূর্ণ ডাটাবেজ ---
+# --- ১০০% সবগুলো দেশের লিস্ট (আপনার অরিজিনাল ডাটাবেজ) ---
 COUNTRY_DB = {
     "880": {"n": "Bangladesh", "f": "🇧🇩"}, "91": {"n": "India", "f": "🇮🇳"}, "1": {"n": "USA/Canada", "f": "🇺🇸"},
     "44": {"n": "UK", "f": "🇬🇧"}, "7": {"n": "Russia", "f": "🇷🇺"}, "62": {"n": "Indonesia", "f": "🇮🇩"},
@@ -66,12 +63,11 @@ COUNTRY_DB = {
 # --- FUNCTIONS ---
 
 def is_user_joined(user_id):
-    """ইউজার গ্রুপে আছে কি না চেক করার ফাংশন"""
     try:
         status = bot.get_chat_member(METHOD_GROUP_ID, user_id).status
         return status in ['member', 'administrator', 'creator']
     except:
-        return True 
+        return True
 
 def get_country_info(range_str):
     for length in [4, 3, 2, 1]:
@@ -161,16 +157,22 @@ def handle_callback(call):
         btns = [types.InlineKeyboardButton(f"📡 Range: {r}", callback_data=f"order_{r}") for r in ranges[:12]]
         markup.add(*btns)
         markup.add(types.InlineKeyboardButton("⬅️ Back", callback_data="buy_menu"))
-        bot.edit_message_text(f"📍 **{c_key}**\nএকটি রেঞ্জ সিলেক্ট করুন:", call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
+        bot.edit_message_text(f"📍 **{c_key}**", call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
 
     elif call.data.startswith("order_"):
         rid = call.data.split("_")[1].replace("XXX", "")
         res = requests.post(f"{BASE_URL}/getnum", headers=headers, json={"rid": rid}).json()
         if res['meta']['code'] == 200:
             num = res['data']['no_plus_number']
-            msg = f"✅ **Number Ready!**\n\n📱 `{num}`\n🌍 {res['data']['country']}\n\nবট ওটিপি চেক করছে..."
+            msg = (f"✅ **Number Ready!**\n\n📱 `{num}`\n🌍 {res['data']['country']}\n\n"
+                   f"বট ওটিপি চেক করছে... কোড না আসলে 'Change Number' ক্লিক করুন।")
+            
+            # আপনার সেই হারিয়ে যাওয়া বাটনগুলো (Group এবং Method) এখানে আছে
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"order_{rid}"))
+            markup.add(types.InlineKeyboardButton("👥 Group", url=CHANNEL_LINK),
+                       types.InlineKeyboardButton("📖 Method", url=METHOD_LINK))
+            
             bot.edit_message_text(msg, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
             threading.Thread(target=auto_check_otp, args=(call.message.chat.id, num)).start()
         else:
@@ -182,11 +184,11 @@ def handle_callback(call):
     elif call.data == "admin":
         bot.send_message(call.message.chat.id, f"🛠 **BSNUMBER Support:**\n\n👤 Admin: {ADMIN_HANDLE}")
 
-# --- MAIN EXECUTION ---
+# --- MAIN ---
 if __name__ == "__main__":
-    # ১. Render-কে খুশি করার জন্য সার্ভার চালু করা
-    keep_alive()
+    # ১. Render-কে বোঝানোর জন্য একটি ওয়েব সার্ভার আলাদা থ্রেডে চালু হবে
+    keep_alive() 
     
-    # ২. টেলিগ্রাম বট চালু করা
+    # ২. বটের মেইন পোলিং চালু হবে
     print("BSNUMBER Bot is starting...")
     bot.infinity_polling()
