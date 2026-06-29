@@ -31,7 +31,7 @@ ADMIN_ID = 8250359361
 ADMIN_HANDLE = "@BORHANSB" 
 
 METHOD_GROUP_ID = -1001859871146 
-OTP_LOG_GROUP_ID = -3968881110 # "borhan otp" গ্রুপ আইডি
+OTP_LOG_GROUP_ID = -1003968881110 # "borhan otp" গ্রুপ আইডি
 
 METHOD_LINK = "https://t.me/earntrick_BS" 
 CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
