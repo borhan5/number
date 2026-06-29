@@ -4,7 +4,7 @@ from flask import Flask
 from threading import Thread
 
 # --- CONFIGURATION ---
-API_TOKEN = "8953289994:AAEpzTRZtGS-K3MBrVC2sT05r5sTb_n7mu8"
+API_TOKEN = "8953289994:AAFFdFTn4g-UJKKispB6_qFW5vbJI1KmAbc"
 VOLTX_KEY = "MQGVM5B5OOW"
 ADMIN_ID = 8250359361  # আপনার দেওয়া অ্যাডমিন আইডি
 GROUP_ID = -1003968881110 
