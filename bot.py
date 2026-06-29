@@ -23,7 +23,7 @@ def keep_alive():
 # ---------------------------------------------------
 
 # --- CONFIGURATION ---
-API_TOKEN = "8953289994:AAHnZ9Cie9KC-5kUtB_joCkWM423DuIEJhs"
+API_TOKEN = "8953289994:AAHf2NC_ev0s5bj5EE8BB4LoGQVJcJdFpQ8"
 VOLTX_KEY = "MQGVM5B5OOW"
 BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
 
@@ -39,7 +39,7 @@ CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 bot = telebot.TeleBot(API_TOKEN)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- বিশ্বের প্রায় সব দেশের ডাটাবেজ ---
+# --- দেশের ডাটাবেজ ---
 COUNTRY_DB = {
     "1": {"n": "USA/Canada", "f": "🇺🇸"}, "7": {"n": "Russia/Kazakhstan", "f": "🇷🇺"}, "20": {"n": "Egypt", "f": "🇪🇬"},
     "27": {"n": "South Africa", "f": "🇿🇦"}, "30": {"n": "Greece", "f": "🇬🇷"}, "31": {"n": "Netherlands", "f": "🇳🇱"},
@@ -116,7 +116,6 @@ def get_country_info(range_str):
 
 def fetch_live_data():
     try:
-        # Timeout 10 added
         res = requests.get(f"{BASE_URL}/liveaccess", headers=headers, timeout=10).json()
         live_stats = {}
         if res['meta']['code'] == 200:
@@ -130,16 +129,20 @@ def fetch_live_data():
         return live_stats
     except: return {}
 
+# ১৫ মিনিটের মাল্টি-ওটিপি লজিক
 def auto_check_otp(chat_id, number, country_info):
     start_time = time.time()
-    while time.time() - start_time < 300: # ৫ মিনিট চেক
+    sent_otps = [] # পাঠানো ওটিপিগুলো মনে রাখার জন্য
+    duration = 15 * 60 # ১৫ মিনিট (৯০০ সেকেন্ড)
+
+    while time.time() - start_time < duration:
         try:
-            # Timeout 10 added
             res = requests.get(f"{BASE_URL}/success-otp", headers=headers, timeout=10).json()
             if res['meta']['code'] == 200:
                 for o in res['data']['otps']:
-                    if o['number'] == number:
-                        full_msg = (f"🎊 **OTP RECEIVED BY BSNUMBER!**\n\n"
+                    # নম্বর মিললে এবং মেসেজটি আগে পাঠানো না হয়ে থাকলে
+                    if o['number'] == number and o['message'] not in sent_otps:
+                        full_msg = (f"🎊 **NEW OTP RECEIVED!**\n\n"
                                    f"🌍 Country: {country_info}\n"
                                    f"📱 Number: `{number}`\n"
                                    f"💬 Message: `{o['message']}`")
@@ -151,9 +154,15 @@ def auto_check_otp(chat_id, number, country_info):
                                     f"📱 Number: `{masked_num}`\n"
                                     f"💬 Message: `{o['message']}`")
                         bot.send_message(OTP_LOG_GROUP_ID, group_msg, parse_mode="Markdown")
-                        return
+                        
+                        sent_otps.append(o['message']) # ওটিপিটি সেভ করে রাখা
             time.sleep(5)
-        except: break
+        except:
+            time.sleep(5)
+            continue
+            
+    # সেশন শেষ হলে নোটিফিকেশন
+    bot.send_message(chat_id, f"⌛ **Session Expired!**\nআপনার `{number}` নম্বরটির ১৫ মিনিটের ওটিপি সেশন শেষ হয়েছে।")
 
 # --- BOT HANDLERS ---
 
@@ -212,13 +221,12 @@ def handle_callback(call):
 
     elif call.data.startswith("order_"):
         rid = call.data.split("_")[1].replace("XXX", "")
-        # Timeout 10 added
         res = requests.post(f"{BASE_URL}/getnum", headers=headers, json={"rid": rid}, timeout=10).json()
         if res['meta']['code'] == 200:
             num = res['data']['no_plus_number']
             country = res['data']['country']
             msg = (f"✅ **Number Ready!**\n\n📱 `{num}`\n🌍 {country}\n\n"
-                   f"বট ওটিপি চেক করছে... কোড না আসলে 'Change Number' ক্লিক করুন।")
+                   f"বট ১৫ মিনিট পর্যন্ত ওটিপি চেক করবে। কোড না আসলে 'Change Number' ক্লিক করুন।")
             
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"order_{rid}"))
@@ -240,5 +248,4 @@ def handle_callback(call):
 if __name__ == "__main__":
     keep_alive() 
     print("BSNUMBER Bot is starting...")
-    # Timeout 10 set for polling
     bot.infinity_polling(timeout=10, long_polling_timeout=10)
