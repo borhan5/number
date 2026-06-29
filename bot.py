@@ -46,7 +46,7 @@ def save_user(user_id):
     if str(user_id) not in users:
         with open("users.txt", "a") as f: f.write(f"{user_id}\n")
 
-# --- ALL COUNTRIES DATA ---
+# --- ALL COUNTRIES DATA --- (আপনার সব দেশ এখানে আছে)
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -100,16 +100,20 @@ def monitor_otp(chat_id, number, svc):
                 for item in res['data'].get('otps', []):
                     found_num = re.sub(r'\D', '', str(item['number']))
                     if target_num == found_num:
-                        msg = item['message']
-                        masked_msg = re.sub(r'\d{4,8}', '******', msg)
-                        bot.send_message(chat_id, f"🎊 *OTP RECEIVED*\n━━━━━━━━━━\n📱 `{number}`\n📩 `{msg}`", parse_mode="Markdown")
+                        original_msg = item['message']
+                        masked_msg = re.sub(r'\d{4,8}', '******', original_msg)
+                        
+                        bot.send_message(chat_id, f"🎊 *OTP RECEIVED*\n━━━━━━━━━━\n📱 `{number}`\n📩 `{original_msg}`", parse_mode="Markdown")
+                        
+                        # আপনার গ্রুপের জন্য লগিং
                         hidden_num = str(number)[:5] + "xxx" + str(number)[-2:]
                         bot.send_message(GROUP_ID, f"🔔 *[OTP LOG]*\nSvc: {svc}\nNum: `{hidden_num}`\nMsg: {masked_msg}")
                         return
         except: pass
         time.sleep(3)
 
-# --- COMMAND HANDLERS ---
+# --- HANDLERS ---
+
 @bot.message_handler(commands=['start'])
 def start_handler(message):
     save_user(message.chat.id)
@@ -149,11 +153,8 @@ def query_handler(call):
                             clean_r = r.replace("XXX", "")
                             prefix = clean_r[:6]
                             is_hit = prefix in LIVE_HITTING_RANGES
+                            if raw_svc == "LiveFB" and not is_hit: continue
                             
-                            # যদি LiveFB হয় তবে শুধু হিট হওয়াগুলো দেখাবে
-                            if raw_svc == "LiveFB" and not is_hit:
-                                continue
-                                
                             icon = "🔥" if is_hit else "✅"
                             c_code = detect_country(clean_r)
                             flag = COUNTRY_DATA[c_code]['flag'] if c_code in COUNTRY_DATA else "🌍"
@@ -170,7 +171,24 @@ def query_handler(call):
             order = session.post(f"{BASE_URL}/getnum", json={"rid": rid}, headers=get_headers()).json()
             if order.get('meta', {}).get('code') == 200:
                 num = order['data']['full_number']
-                bot.edit_message_text(f"✅ *NUMBER READY*\n📞 `+{num}`\n⏳ Waiting for OTP...", call.message.chat.id, call.message.message_id, parse_mode="Markdown")
+                
+                # --- এখানে আপনার বাটনগুলো অ্যাড করা হয়েছে ---
+                mk = types.InlineKeyboardMarkup(row_width=2)
+                mk.add(
+                    types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"svc_{svc}"),
+                    types.InlineKeyboardButton("📢 JOIN CHANNEL", url=CHANNEL_LINK),
+                    types.InlineKeyboardButton("📖 METHOD GROUP", url=METHOD_LINK)
+                )
+                
+                order_text = (
+                    f"✅ *NUMBER READY*\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"📞 **Number:** `+{num}`\n"
+                    f"⏳ **Status:** `Waiting for OTP...` 🌀\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━"
+                )
+                
+                bot.edit_message_text(order_text, call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
                 Thread(target=monitor_otp, args=(call.message.chat.id, num, svc)).start()
             else:
                 bot.send_message(call.message.chat.id, "❌ No Stock for this range.")
@@ -180,7 +198,7 @@ def query_handler(call):
 def bal_h(message):
     try:
         res = session.get(f"{BASE_URL}/user-balance", headers=get_headers()).json()
-        bot.send_message(message.chat.id, f"💰 *Current Balance:* `{res['data']['balance']} BDT`", parse_mode="Markdown")
+        bot.send_message(message.chat.id, f"💰 *Balance:* `{res['data']['balance']} BDT`", parse_mode="Markdown")
     except: pass
 
 @bot.message_handler(commands=['broadcast'])
