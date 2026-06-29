@@ -6,7 +6,7 @@ import time
 from telebot import types
 from flask import Flask
 
-# --- RENDER FIX (এই অংশটুকু ছাড়া Render-এ বট চলবে না) ---
+# --- RENDER FIX (বট চালু রাখার জন্য) ---
 app = Flask('')
 
 @app.route('/')
@@ -31,33 +31,67 @@ ADMIN_ID = 8250359361
 ADMIN_HANDLE = "@BORHANSB" 
 
 METHOD_GROUP_ID = -1001859871146 
+OTP_LOG_GROUP_ID = -1001859871146 # "borhan otp" গ্রুপ আইডি
+
 METHOD_LINK = "https://t.me/earntrick_BS" 
 CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 
 bot = telebot.TeleBot(API_TOKEN)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- ১০০% সবগুলো দেশের লিস্ট (আপনার অরিজিনাল ডাটাবেজ) ---
+# --- বিশ্বের প্রায় সব দেশের ডাটাবেজ (Full World Countries) ---
 COUNTRY_DB = {
-    "880": {"n": "Bangladesh", "f": "🇧🇩"}, "91": {"n": "India", "f": "🇮🇳"}, "1": {"n": "USA/Canada", "f": "🇺🇸"},
-    "44": {"n": "UK", "f": "🇬🇧"}, "7": {"n": "Russia", "f": "🇷🇺"}, "62": {"n": "Indonesia", "f": "🇮🇩"},
-    "84": {"n": "Vietnam", "f": "🇻🇳"}, "63": {"n": "Philippines", "f": "🇵🇭"}, "234": {"n": "Nigeria", "f": "🇳🇬"},
-    "225": {"n": "Ivory Coast", "f": "🇨🇮"}, "224": {"n": "Guinea", "f": "🇬🇳"}, "261": {"n": "Madagascar", "f": "🇲🇬"},
-    "236": {"n": "CAR", "f": "🇨🇫"}, "229": {"n": "Benin", "f": "🇧🇯"}, "223": {"n": "Mali", "f": "🇲🇱"},
-    "251": {"n": "Ethiopia", "f": "🇪🇹"}, "255": {"n": "Tanzania", "f": "🇹🇿"}, "20": {"n": "Egypt", "f": "🇪🇬"},
-    "212": {"n": "Morocco", "f": "🇲🇦"}, "27": {"n": "South Africa", "f": "🇿🇦"}, "55": {"n": "Brazil", "f": "🇧🇷"},
-    "60": {"n": "Malaysia", "f": "🇲🇾"}, "66": {"n": "Thailand", "f": "🇹🇭"}, "92": {"n": "Pakistan", "f": "🇵🇰"},
-    "994": {"n": "Azerbaijan", "f": "🇦🇿"}, "90": {"n": "Turkey", "f": "🇹🇷"}, "49": {"n": "Germany", "f": "🇩🇪"},
-    "33": {"n": "France", "f": "🇫🇷"}, "39": {"n": "Italy", "f": "🇮🇹"}, "34": {"n": "Spain", "f": "🇪🇸"},
-    "48": {"n": "Poland", "f": "🇵🇱"}, "380": {"n": "Ukraine", "f": "🇺🇦"}, "971": {"n": "UAE", "f": "🇦🇪"},
-    "966": {"n": "Saudi Arabia", "f": "🇸🇦"}, "233": {"n": "Ghana", "f": "🇬🇭"}, "254": {"n": "Kenya", "f": "🇰🇪"},
-    "94": {"n": "Sri Lanka", "f": "🇱🇰"}, "977": {"n": "Nepal", "f": "🇳🇵"}, "95": {"n": "Myanmar", "f": "🇲🇲"},
-    "855": {"n": "Cambodia", "f": "🇰🇭"}, "98": {"n": "Iran", "f": "🇮🇷"}, "964": {"n": "Iraq", "f": "🇮🇶"},
-    "93": {"n": "Afghanistan", "f": "🇦🇫"}, "998": {"n": "Uzbekistan", "f": "🇺🇿"}, "31": {"n": "Netherlands", "f": "🇳🇱"},
-    "32": {"n": "Belgium", "f": "🇧🇪"}, "46": {"n": "Sweden", "f": "🇸🇪"}, "52": {"n": "Mexico", "f": "🇲🇽"},
-    "54": {"n": "Argentina", "f": "🇦🇷"}, "57": {"n": "Colombia", "f": "🇨🇴"}, "216": {"n": "Tunisia", "f": "🇹🇳"},
-    "256": {"n": "Uganda", "f": "🇺🇬"}, "243": {"n": "DR Congo", "f": "🇨🇩"}, "244": {"n": "Angola", "f": "🇦🇴"},
-    "250": {"n": "Rwanda", "f": "🇷🇼"}, "252": {"n": "Somalia", "f": "🇸🇴"}, "268": {"n": "Eswatini", "f": "🇸🇿"}
+    "1": {"n": "USA/Canada", "f": "🇺🇸"}, "7": {"n": "Russia/Kazakhstan", "f": "🇷🇺"}, "20": {"n": "Egypt", "f": "🇪🇬"},
+    "27": {"n": "South Africa", "f": "🇿🇦"}, "30": {"n": "Greece", "f": "🇬🇷"}, "31": {"n": "Netherlands", "f": "🇳🇱"},
+    "32": {"n": "Belgium", "f": "🇧🇪"}, "33": {"n": "France", "f": "🇫🇷"}, "34": {"n": "Spain", "f": "🇪🇸"},
+    "36": {"n": "Hungary", "f": "🇭🇺"}, "39": {"n": "Italy", "f": "🇮🇹"}, "40": {"n": "Romania", "f": "🇷🇴"},
+    "41": {"n": "Switzerland", "f": "🇨🇭"}, "43": {"n": "Austria", "f": "🇦🇹"}, "44": {"n": "UK", "f": "🇬🇧"},
+    "45": {"n": "Denmark", "f": "🇩🇰"}, "46": {"n": "Sweden", "f": "🇸🇪"}, "47": {"n": "Norway", "f": "🇳🇴"},
+    "48": {"n": "Poland", "f": "🇵🇱"}, "49": {"n": "Germany", "f": "🇩🇪"}, "51": {"n": "Peru", "f": "🇵🇪"},
+    "52": {"n": "Mexico", "f": "🇲🇽"}, "53": {"n": "Cuba", "f": "🇨🇺"}, "54": {"n": "Argentina", "f": "🇦🇷"},
+    "55": {"n": "Brazil", "f": "🇧🇷"}, "56": {"n": "Chile", "f": "🇨🇱"}, "57": {"n": "Colombia", "f": "🇨🇴"},
+    "58": {"n": "Venezuela", "f": "🇻🇪"}, "60": {"n": "Malaysia", "f": "🇲🇾"}, "61": {"n": "Australia", "f": "🇦🇺"},
+    "62": {"n": "Indonesia", "f": "🇮🇩"}, "63": {"n": "Philippines", "f": "🇵🇭"}, "64": {"n": "New Zealand", "f": "🇳🇿"},
+    "65": {"n": "Singapore", "f": "🇸🇬"}, "66": {"n": "Thailand", "f": "🇹🇭"}, "81": {"n": "Japan", "f": "🇯🇵"},
+    "82": {"n": "South Korea", "f": "🇰🇷"}, "84": {"n": "Vietnam", "f": "🇻🇳"}, "86": {"n": "China", "f": "🇨🇳"},
+    "90": {"n": "Turkey", "f": "🇹🇷"}, "91": {"n": "India", "f": "🇮🇳"}, "92": {"n": "Pakistan", "f": "🇵🇰"},
+    "93": {"n": "Afghanistan", "f": "🇦🇫"}, "94": {"n": "Sri Lanka", "f": "🇱🇰"}, "95": {"n": "Myanmar", "f": "🇲🇲"},
+    "98": {"n": "Iran", "f": "🇮🇷"}, "211": {"n": "South Sudan", "f": "🇸🇸"}, "212": {"n": "Morocco", "f": "🇲🇦"},
+    "213": {"n": "Algeria", "f": "🇩🇿"}, "216": {"n": "Tunisia", "f": "🇹🇳"}, "218": {"n": "Libya", "f": "🇱🇾"},
+    "220": {"n": "Gambia", "f": "🇬🇲"}, "221": {"n": "Senegal", "f": "🇸🇳"}, "222": {"n": "Mauritania", "f": "🇲🇷"},
+    "223": {"n": "Mali", "f": "🇲🇱"}, "224": {"n": "Guinea", "f": "🇬🇳"}, "225": {"n": "Ivory Coast", "f": "🇨🇮"},
+    "226": {"n": "Burkina Faso", "f": "🇧🇫"}, "227": {"n": "Niger", "f": "🇳🇪"}, "228": {"n": "Togo", "f": "🇹🇬"},
+    "229": {"n": "Benin", "f": "🇧🇯"}, "230": {"n": "Mauritius", "f": "🇲🇺"}, "231": {"n": "Liberia", "f": "🇱🇷"},
+    "232": {"n": "Sierra Leone", "f": "🇸🇱"}, "233": {"n": "Ghana", "f": "🇬🇭"}, "234": {"n": "Nigeria", "f": "🇳🇬"},
+    "235": {"n": "Chad", "f": "🇹🇩"}, "236": {"n": "CAR", "f": "🇨🇫"}, "237": {"n": "Cameroon", "f": "🇨🇲"},
+    "239": {"n": "Sao Tome", "f": "🇸🇹"}, "240": {"n": "Equatorial Guinea", "f": "🇬🇶"}, "241": {"n": "Gabon", "f": "🇬🇦"},
+    "242": {"n": "Congo", "f": "🇨🇬"}, "243": {"n": "DR Congo", "f": "🇨🇩"}, "244": {"n": "Angola", "f": "🇦🇴"},
+    "245": {"n": "Guinea-Bissau", "f": "🇬🇼"}, "248": {"n": "Seychelles", "f": "🇸🇨"}, "249": {"n": "Sudan", "f": "🇸🇩"},
+    "250": {"n": "Rwanda", "f": "🇷🇼"}, "251": {"n": "Ethiopia", "f": "🇪🇹"}, "252": {"n": "Somalia", "f": "🇸🇴"},
+    "253": {"n": "Djibouti", "f": "🇩🇯"}, "254": {"n": "Kenya", "f": "🇰🇪"}, "255": {"n": "Tanzania", "f": "🇹🇿"},
+    "256": {"n": "Uganda", "f": "🇺🇬"}, "257": {"n": "Burundi", "f": "🇧🇮"}, "258": {"n": "Mozambique", "f": "🇲🇿"},
+    "260": {"n": "Zambia", "f": "🇿🇲"}, "261": {"n": "Madagascar", "f": "🇲🇬"}, "263": {"n": "Zimbabwe", "f": "🇿🇼"},
+    "264": {"n": "Namibia", "f": "🇳🇦"}, "265": {"n": "Malawi", "f": "🇲🇼"}, "266": {"n": "Lesotho", "f": "🇱🇸"},
+    "267": {"n": "Botswana", "f": "🇧🇼"}, "268": {"n": "Eswatini", "f": "🇸🇿"}, "291": {"n": "Eritrea", "f": "🇪🇷"},
+    "351": {"n": "Portugal", "f": "🇵🇹"}, "352": {"n": "Luxembourg", "f": "🇱🇺"}, "353": {"n": "Ireland", "f": "🇮🇪"},
+    "354": {"n": "Iceland", "f": "🇮🇸"}, "355": {"n": "Albania", "f": "🇦🇱"}, "358": {"n": "Finland", "f": "🇫🇮"},
+    "359": {"n": "Bulgaria", "f": "🇧🇬"}, "370": {"n": "Lithuania", "f": "🇱🇹"}, "371": {"n": "Latvia", "f": "🇱🇻"},
+    "372": {"n": "Estonia", "f": "🇪🇪"}, "373": {"n": "Moldova", "f": "🇲🇩"}, "374": {"n": "Armenia", "f": "🇦🇲"},
+    "375": {"n": "Belarus", "f": "🇧🇾"}, "380": {"n": "Ukraine", "f": "🇺🇦"}, "381": {"n": "Serbia", "f": "🇷🇸"},
+    "385": {"n": "Croatia", "f": "🇭🇷"}, "386": {"n": "Slovenia", "f": "🇸🇮"}, "420": {"n": "Czech Republic", "f": "🇨🇿"},
+    "421": {"n": "Slovakia", "f": "🇸🇰"}, "502": {"n": "Guatemala", "f": "🇬🇹"}, "503": {"n": "El Salvador", "f": "🇸🇻"},
+    "504": {"n": "Honduras", "f": "🇭🇳"}, "505": {"n": "Nicaragua", "f": "🇳🇮"}, "506": {"n": "Costa Rica", "f": "🇨🇷"},
+    "507": {"n": "Panama", "f": "🇵🇦"}, "509": {"n": "Haiti", "f": "🇭🇹"}, "591": {"n": "Bolivia", "f": "🇧🇴"},
+    "593": {"n": "Ecuador", "f": "🇪🇨"}, "595": {"n": "Paraguay", "f": "🇵🇾"}, "598": {"n": "Uruguay", "f": "🇺🇾"},
+    "852": {"n": "Hong Kong", "f": "🇭🇰"}, "855": {"n": "Cambodia", "f": "🇰🇭"}, "856": {"n": "Laos", "f": "🇱🇦"},
+    "880": {"n": "Bangladesh", "f": "🇧🇩"}, "886": {"n": "Taiwan", "f": "🇹🇼"}, "960": {"n": "Maldives", "f": "🇲🇻"},
+    "961": {"n": "Lebanon", "f": "🇱🇧"}, "962": {"n": "Jordan", "f": "🇯🇴"}, "963": {"n": "Syria", "f": "🇸🇾"},
+    "964": {"n": "Iraq", "f": "🇮🇶"}, "965": {"n": "Kuwait", "f": "🇰🇼"}, "966": {"n": "Saudi Arabia", "f": "🇸🇦"},
+    "967": {"n": "Yemen", "f": "🇾🇪"}, "968": {"n": "Oman", "f": "🇴🇲"}, "971": {"n": "UAE", "f": "🇦🇪"},
+    "972": {"n": "Israel", "f": "🇮🇱"}, "973": {"n": "Bahrain", "f": "🇧🇭"}, "974": {"n": "Qatar", "f": "🇶🇦"},
+    "976": {"n": "Mongolia", "f": "🇲🇳"}, "977": {"n": "Nepal", "f": "🇳🇵"}, "992": {"n": "Tajikistan", "f": "🇹🇯"},
+    "993": {"n": "Turkmenistan", "f": "🇹🇲"}, "994": {"n": "Azerbaijan", "f": "🇦🇿"}, "995": {"n": "Georgia", "f": "🇬🇪"},
+    "996": {"n": "Kyrgyzstan", "f": "🇰🇬"}, "998": {"n": "Uzbekistan", "f": "🇺🇿"}
 }
 
 # --- FUNCTIONS ---
@@ -66,8 +100,13 @@ def is_user_joined(user_id):
     try:
         status = bot.get_chat_member(METHOD_GROUP_ID, user_id).status
         return status in ['member', 'administrator', 'creator']
-    except:
-        return True
+    except: return True
+
+def mask_number(num_str):
+    """মাঝখানের ৩টি সংখ্যা হাইড করার ফাংশন"""
+    if len(num_str) > 7:
+        return f"{num_str[:5]}***{num_str[-3:]}"
+    return num_str
 
 def get_country_info(range_str):
     for length in [4, 3, 2, 1]:
@@ -91,15 +130,28 @@ def fetch_live_data():
         return live_stats
     except: return {}
 
-def auto_check_otp(chat_id, number):
+def auto_check_otp(chat_id, number, country_info):
     start_time = time.time()
-    while time.time() - start_time < 300:
+    while time.time() - start_time < 300: # ৫ মিনিট চেক
         try:
             res = requests.get(f"{BASE_URL}/success-otp", headers=headers).json()
             if res['meta']['code'] == 200:
                 for o in res['data']['otps']:
                     if o['number'] == number:
-                        bot.send_message(chat_id, f"🎊 **OTP RECEIVED BY BSNUMBER!**\n\n📱 `{number}`\n💬 `{o['message']}`", parse_mode="Markdown")
+                        # ইউজারের জন্য ফুল মেসেজ
+                        full_msg = (f"🎊 **OTP RECEIVED BY BSNUMBER!**\n\n"
+                                   f"🌍 Country: {country_info}\n"
+                                   f"📱 Number: `{number}`\n"
+                                   f"💬 Message: `{o['message']}`")
+                        bot.send_message(chat_id, full_msg, parse_mode="Markdown")
+                        
+                        # গ্রুপের জন্য মাস্ক মেসেজ (নম্বর হাইড)
+                        masked_num = mask_number(number)
+                        group_msg = (f"📢 **NEW OTP LOG (borhan otp)**\n\n"
+                                    f"🌍 Country: {country_info}\n"
+                                    f"📱 Number: `{masked_num}`\n"
+                                    f"💬 Message: `{o['message']}`")
+                        bot.send_message(OTP_LOG_GROUP_ID, group_msg, parse_mode="Markdown")
                         return
             time.sleep(5)
         except: break
@@ -147,7 +199,7 @@ def handle_callback(call):
         btns = [types.InlineKeyboardButton(f"{c} ({len(r)})", callback_data=f"list_{c}") for c, r in live_data.items()]
         markup.add(*btns)
         markup.add(types.InlineKeyboardButton("⬅️ Back Menu", callback_data="back_start"))
-        bot.edit_message_text("🌍 **Select Country (Live First):**", call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
+        bot.edit_message_text("🌍 **Select Country:**", call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
 
     elif call.data.startswith("list_"):
         c_key = call.data.replace("list_", "")
@@ -164,17 +216,18 @@ def handle_callback(call):
         res = requests.post(f"{BASE_URL}/getnum", headers=headers, json={"rid": rid}).json()
         if res['meta']['code'] == 200:
             num = res['data']['no_plus_number']
-            msg = (f"✅ **Number Ready!**\n\n📱 `{num}`\n🌍 {res['data']['country']}\n\n"
+            country = res['data']['country']
+            msg = (f"✅ **Number Ready!**\n\n📱 `{num}`\n🌍 {country}\n\n"
                    f"বট ওটিপি চেক করছে... কোড না আসলে 'Change Number' ক্লিক করুন।")
             
-            # আপনার সেই হারিয়ে যাওয়া বাটনগুলো (Group এবং Method) এখানে আছে
+            # আপনার বাটনগুলো এখানে
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"order_{rid}"))
             markup.add(types.InlineKeyboardButton("👥 Group", url=CHANNEL_LINK),
                        types.InlineKeyboardButton("📖 Method", url=METHOD_LINK))
             
             bot.edit_message_text(msg, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
-            threading.Thread(target=auto_check_otp, args=(call.message.chat.id, num)).start()
+            threading.Thread(target=auto_check_otp, args=(call.message.chat.id, num, country)).start()
         else:
             bot.answer_callback_query(call.id, "No Stock!", show_alert=True)
 
@@ -186,9 +239,6 @@ def handle_callback(call):
 
 # --- MAIN ---
 if __name__ == "__main__":
-    # ১. Render-কে বোঝানোর জন্য একটি ওয়েব সার্ভার আলাদা থ্রেডে চালু হবে
     keep_alive() 
-    
-    # ২. বটের মেইন পোলিং চালু হবে
     print("BSNUMBER Bot is starting...")
     bot.infinity_polling()
