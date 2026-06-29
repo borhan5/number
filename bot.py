@@ -5,7 +5,7 @@ import time
 from telebot import types
 
 # --- CONFIGURATION ---
-API_TOKEN = "8953289994:AAHSON1Qjz7BQmZB1gvpu42vkiX0PaCbayA"
+API_TOKEN = "8953289994:AAENyenhy1NmI55_CZgLFUs4POgaXOUDqxE"
 VOLTX_KEY = "MQGVM5B5OOW"
 BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
 
