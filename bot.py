@@ -17,32 +17,27 @@ WELCOME_IMAGE = "https://telegra.ph/file/0c9a3c988b4c0d9a6c4b1.jpg"
 session = requests.Session()
 bot = telebot.TeleBot(API_TOKEN)
 
-# লাইভ ফেসবুক রেঞ্জ স্টোর করার সেট
-LIVE_FB_RANGES = set()
+# লাইভ হিট হওয়া রেঞ্জ স্টোর করার সেট
+LIVE_HITTING_RANGES = set()
 
 # --- BACKGROUND CONSOLE SCANNER ---
 def scan_public_console():
-    """পাবলিক কনসোল রিড করে ফেসবুকের হিটিং রেঞ্জ খুঁজে বের করবে"""
     while True:
         try:
             headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
             res = session.get(f"{BASE_URL}/success-otp", headers=headers, timeout=10).json()
             if res.get('meta', {}).get('code') == 200:
                 for item in res['data'].get('otps', []):
-                    msg = item.get('message', '').lower()
                     num = str(item.get('number', ''))
-                    # ফেসবুক বা ওটিপি মাস্ক করা থাকলে রেঞ্জ সংগ্রহ করবে
-                    if "facebook" in msg or "fb" in msg or "*" in msg:
-                        r_val = num[:6]
-                        if len(r_val) >= 5:
-                            LIVE_FB_RANGES.add(r_val)
-                
-                if len(LIVE_FB_RANGES) > 30:
-                    LIVE_FB_RANGES.clear()
+                    r_val = num[:6]
+                    if len(r_val) >= 5:
+                        LIVE_HITTING_RANGES.add(r_val)
+                if len(LIVE_HITTING_RANGES) > 40:
+                    LIVE_HITTING_RANGES.clear()
         except: pass
-        time.sleep(25)
+        time.sleep(20)
 
-# --- USER DATABASE LOGIC ---
+# --- USER DATABASE ---
 def save_user(user_id):
     if not os.path.exists("users.txt"):
         with open("users.txt", "w") as f: f.write("")
@@ -51,7 +46,7 @@ def save_user(user_id):
     if str(user_id) not in users:
         with open("users.txt", "a") as f: f.write(f"{user_id}\n")
 
-# --- FULL COUNTRY DATA --- (আপনার সব দেশ এখানে আছে)
+# --- ALL COUNTRIES DATA ---
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -105,18 +100,16 @@ def monitor_otp(chat_id, number, svc):
                 for item in res['data'].get('otps', []):
                     found_num = re.sub(r'\D', '', str(item['number']))
                     if target_num == found_num:
-                        original_msg = item['message']
-                        masked_msg = re.sub(r'\d{4,8}', '******', original_msg)
-                        
-                        bot.send_message(chat_id, f"🎊 *OTP RECEIVED*\n━━━━━━━━━━\n📱 `{number}`\n📩 `{original_msg}`", parse_mode="Markdown")
-                        
+                        msg = item['message']
+                        masked_msg = re.sub(r'\d{4,8}', '******', msg)
+                        bot.send_message(chat_id, f"🎊 *OTP RECEIVED*\n━━━━━━━━━━\n📱 `{number}`\n📩 `{msg}`", parse_mode="Markdown")
                         hidden_num = str(number)[:5] + "xxx" + str(number)[-2:]
                         bot.send_message(GROUP_ID, f"🔔 *[OTP LOG]*\nSvc: {svc}\nNum: `{hidden_num}`\nMsg: {masked_msg}")
                         return
         except: pass
         time.sleep(3)
 
-# --- HANDLERS ---
+# --- COMMAND HANDLERS ---
 @bot.message_handler(commands=['start'])
 def start_handler(message):
     save_user(message.chat.id)
@@ -124,11 +117,18 @@ def start_handler(message):
     markup.add(types.KeyboardButton("🚀 Get Number"), types.KeyboardButton("💎 My Balance"), types.KeyboardButton("📖 Method"))
     bot.send_message(message.chat.id, "👋 *Welcome to Premium Sync Bot*", reply_markup=markup, parse_mode="Markdown")
 
+@bot.message_handler(func=lambda message: message.text == "📖 Method")
+def method_handler(message):
+    mk = types.InlineKeyboardMarkup(row_width=1)
+    mk.add(types.InlineKeyboardButton("📢 Join Main Channel", url=CHANNEL_LINK), types.InlineKeyboardButton("📖 Join Method Group", url=METHOD_LINK))
+    bot.send_message(message.chat.id, "📑 *আমাদের সাপোর্ট এবং মেথড লিংক সমূহ:*", reply_markup=mk, parse_mode="Markdown")
+
 @bot.message_handler(func=lambda message: message.text == "🚀 Get Number")
 def service_menu(message):
     mk = types.InlineKeyboardMarkup(row_width=1)
     mk.add(
-        types.InlineKeyboardButton("🔥 NEW FACEBOOK (Live Hits)", callback_data="svc_Facebook"),
+        types.InlineKeyboardButton("🔥 LIVE NEW FB (Hits Only)", callback_data="svc_LiveFB"),
+        types.InlineKeyboardButton("📘 FACEBOOK / 📸 INSTAGRAM", callback_data="svc_Facebook"),
         types.InlineKeyboardButton("💬 WHATSAPP BUSINESS", callback_data="svc_WhatsApp")
     )
     bot.send_message(message.chat.id, "🛠 *সার্ভিস সিলেক্ট করুন:*", reply_markup=mk, parse_mode="Markdown")
@@ -136,7 +136,9 @@ def service_menu(message):
 @bot.callback_query_handler(func=lambda call: True)
 def query_handler(call):
     if call.data.startswith("svc_"):
-        svc = call.data.split("_")[1]
+        raw_svc = call.data.split("_")[1]
+        svc = "Facebook" if raw_svc == "LiveFB" else raw_svc
+        
         try:
             res = session.get(f"{BASE_URL}/liveaccess", headers=get_headers()).json()
             if res.get('meta', {}).get('code') == 200:
@@ -146,13 +148,19 @@ def query_handler(call):
                         for r in s['ranges']:
                             clean_r = r.replace("XXX", "")
                             prefix = clean_r[:6]
-                            icon = "🔥" if prefix in LIVE_FB_RANGES else "✅"
+                            is_hit = prefix in LIVE_HITTING_RANGES
+                            
+                            # যদি LiveFB হয় তবে শুধু হিট হওয়াগুলো দেখাবে
+                            if raw_svc == "LiveFB" and not is_hit:
+                                continue
+                                
+                            icon = "🔥" if is_hit else "✅"
                             c_code = detect_country(clean_r)
                             flag = COUNTRY_DATA[c_code]['flag'] if c_code in COUNTRY_DATA else "🌍"
                             mk.add(types.InlineKeyboardButton(f"{icon} {flag} {clean_r}", callback_data=f"buy_{svc}_{clean_r}"))
                 
-                bot.edit_message_text(f"🌍 *{svc} Global Stock*\n(🔥 = Live Console Hits)", 
-                                     call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
+                msg = "🔥 *Live Hitting Ranges Only:*" if raw_svc == "LiveFB" else f"🌍 *{svc} Available Stock*"
+                bot.edit_message_text(msg, call.message.chat.id, call.message.message_id, parse_mode="Markdown", reply_markup=mk)
         except: pass
 
     elif call.data.startswith("buy_"):
@@ -172,7 +180,7 @@ def query_handler(call):
 def bal_h(message):
     try:
         res = session.get(f"{BASE_URL}/user-balance", headers=get_headers()).json()
-        bot.send_message(message.chat.id, f"💰 *Balance:* `{res['data']['balance']} BDT`", parse_mode="Markdown")
+        bot.send_message(message.chat.id, f"💰 *Current Balance:* `{res['data']['balance']} BDT`", parse_mode="Markdown")
     except: pass
 
 @bot.message_handler(commands=['broadcast'])
@@ -184,11 +192,6 @@ def bc_h(message):
             try: bot.send_message(u, txt)
             except: pass
         bot.reply_to(message, "✅ Broadcast Done!")
-
-# --- EXECUTION ---
-app = Flask('')
-@app.route('/')
-def home(): return "RUNNING"
 
 if __name__ == "__main__":
     Thread(target=scan_public_console).start()
