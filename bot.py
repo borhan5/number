@@ -34,7 +34,7 @@ bot = telebot.TeleBot(API_TOKEN, threaded=True)
 session = requests.Session()
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- ২০০+ দেশের ডাটাবেজ (User Provided) ---
+# --- ২০০+ দেশের ডাটাবেজ ---
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -71,7 +71,7 @@ COUNTRY_DATA = {
     "998": {"name": "Uzbekistan", "flag": "🇺🇿"}
 }
 
-# --- লাইভ কনসোল অনুযায়ী ক্যাশ সিস্টেম ---
+# --- ক্যাশ সিস্টেম (Prioritized by Live Console) ---
 cache = {"live_data": {}, "ordered_keys": [], "time": 0}
 
 def get_country_info(range_str):
@@ -82,45 +82,28 @@ def get_country_info(range_str):
     return "🏳️", f"Code {range_str[:3]}"
 
 def fetch_live_data():
-    """Live Console এর সিরিয়াল অনুযায়ী ফেসবুক/ইন্সটাগ্রাম আগে রেখে সাজানো"""
-    if time.time() - cache["time"] < 60: # ১ মিনিট ক্যাশ
+    if time.time() - cache["time"] < 60:
         return cache["live_data"], cache["ordered_keys"]
-    
     try:
         res = session.get(f"{BASE_URL}/liveaccess", headers=headers, timeout=10).json()
         if res.get('meta', {}).get('code') == 200:
             fb_ig_priority = []
             others = []
             all_data = {}
-
-            # লাইভ কনসোল সিরিয়াল অনুযায়ী সার্ভিস প্রসেসিং
             for service in res['data']['services']:
                 sid = service['sid'].lower()
                 is_priority = "facebook" in sid or "instagram" in sid
-                
                 for r in service['ranges']:
                     flag, name = get_country_info(r)
                     key = f"{flag} {name}"
-                    
-                    if key not in all_data:
-                        all_data[key] = []
-                    if r not in all_data[key]:
-                        all_data[key].append(r)
-
-                    # প্রায়োরিটি লিস্ট তৈরি
+                    if key not in all_data: all_data[key] = []
+                    if r not in all_data[key]: all_data[key].append(r)
                     if is_priority:
-                        if key not in fb_ig_priority:
-                            fb_ig_priority.append(key)
+                        if key not in fb_ig_priority: fb_ig_priority.append(key)
                     else:
-                        if key not in fb_ig_priority and key not in others:
-                            others.append(key)
-
-            # ফাইনাল সিরিয়াল: FB/IG Priority -> Others (Live Order)
+                        if key not in fb_ig_priority and key not in others: others.append(key)
             final_keys = fb_ig_priority + others
-            
-            cache["live_data"] = all_data
-            cache["ordered_keys"] = final_keys
-            cache["time"] = time.time()
+            cache["live_data"], cache["ordered_keys"], cache["time"] = all_data, final_keys, time.time()
             return all_data, final_keys
     except: pass
     return cache["live_data"], cache["ordered_keys"]
@@ -129,7 +112,7 @@ def fetch_live_data():
 def monitor_otp(chat_id, number, country_info, user_name):
     start_time = time.time()
     seen_otps = set()
-    while time.time() - start_time < 900: # ১৫ মিনিট
+    while time.time() - start_time < 900:
         try:
             res = session.get(f"{BASE_URL}/success-otp", headers=headers, timeout=10).json()
             if res.get('meta', {}).get('code') == 200:
@@ -138,7 +121,7 @@ def monitor_otp(chat_id, number, country_info, user_name):
                         otp_msg = o['message']
                         if otp_msg not in seen_otps:
                             bot.send_message(chat_id, f"🎊 **NEW OTP RECEIVED!**\n\n📱 `{number}`\n💬 `{otp_msg}`", parse_mode="Markdown")
-                            log = f"📢 **OTP LOG (Live Console)**\n👤 User: {user_name}\n🌍 {country_info}\n📱 `{number}`\n💬 `{otp_msg}`"
+                            log = f"📢 **OTP LOG (BSNUMBER)**\n👤 User: {user_name}\n🌍 {country_info}\n📱 `{number}`\n💬 `{otp_msg}`"
                             try: bot.send_message(OTP_LOG_GROUP_ID, log)
                             except: pass
                             seen_otps.add(otp_msg)
@@ -151,7 +134,7 @@ def start(message):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("🔥 Get Number", callback_data="page_0"))
     markup.add(types.InlineKeyboardButton("🚀 Method Group", url=METHOD_LINK))
-    bot.send_message(message.chat.id, "🌟 **Welcome to BSNUMBER Bot**\nলাইভ কনসোল অনুযায়ী ওটিপি দেওয়া দেশগুলো সবার উপরে সাজানো হয়েছে।", reply_markup=markup)
+    bot.send_message(message.chat.id, "🌟 **Welcome to BSNUMBER Bot**\nলাইভ কনসোল অনুযায়ী দেশগুলো সাজানো হয়েছে।", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
@@ -160,28 +143,21 @@ def handle_callback(call):
     if data.startswith("page_"):
         page = int(data.split("_")[1])
         live_data, ordered_keys = fetch_live_data()
-        
         if not ordered_keys:
-            bot.answer_callback_query(call.id, "No Stock in Live Console!", show_alert=True)
+            bot.answer_callback_query(call.id, "No Stock Currently!", show_alert=True)
             return
-
         per_page = 16
-        start_idx = page * per_page
-        end_idx = start_idx + per_page
+        start_idx, end_idx = page * per_page, (page + 1) * per_page
         current_list = ordered_keys[start_idx:end_idx]
-        
         markup = types.InlineKeyboardMarkup(row_width=2)
         btns = [types.InlineKeyboardButton(c, callback_data=f"c_{c[:15]}") for c in current_list]
         markup.add(*btns)
-        
         nav_btns = []
         if page > 0: nav_btns.append(types.InlineKeyboardButton("⬅️ Prev", callback_data=f"page_{page-1}"))
         if end_idx < len(ordered_keys): nav_btns.append(types.InlineKeyboardButton("Next ➡️", callback_data=f"page_{page+1}"))
         if nav_btns: markup.add(*nav_btns)
-        
         markup.add(types.InlineKeyboardButton("🏠 Menu", callback_data="back_start"))
-        bot.edit_message_text(f"🌍 **Select Country (Page {page+1}):**\n(Live: FB & IG Priority)", 
-                             call.message.chat.id, call.message.message_id, reply_markup=markup)
+        bot.edit_message_text(f"🌍 **Select Country (Page {page+1}):**", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
     elif data.startswith("c_"):
         c_short = data[2:]
@@ -197,7 +173,7 @@ def handle_callback(call):
 
     elif data.startswith("ord_"):
         rid = data.split("_")[1]
-        bot.answer_callback_query(call.id, "Ordering...")
+        bot.answer_callback_query(call.id, "Getting new number...")
         try:
             res = session.post(f"{BASE_URL}/getnum", headers=headers, json={"rid": rid}, timeout=10).json()
             if res.get('meta', {}).get('code') == 200:
@@ -205,16 +181,19 @@ def handle_callback(call):
                 country = res['data']['country']
                 user = call.from_user.first_name
                 
+                # --- চেঞ্জ নম্বর বাটনে ওই একই rid দেওয়া হয়েছে যাতে ওই রেঞ্জ থেকেই নম্বর দেয় ---
                 markup = types.InlineKeyboardMarkup(row_width=2)
-                markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data="page_0"))
+                markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"ord_{rid}"))
                 markup.add(types.InlineKeyboardButton("🚀 Method Group", url=METHOD_LINK))
                 markup.add(types.InlineKeyboardButton("📢 OTP Log Group", url=OTP_LOG_LINK))
                 markup.add(types.InlineKeyboardButton("🏠 Menu", callback_data="back_start"))
                 
-                bot.edit_message_text(f"✅ **Number Ready!**\n📱 `{num}`\n🌍 {country}\n\n💬 ওটিপি আসলে এখানে চলে আসবে।", 
+                bot.edit_message_text(f"✅ **Number Ready!**\n📱 `{num}`\n🌍 {country}\n\n💬 ওটিপির জন্য অপেক্ষা করুন...", 
                                      call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
                 
                 threading.Thread(target=monitor_otp, args=(call.message.chat.id, num, country, user), daemon=True).start()
+            else:
+                bot.send_message(call.message.chat.id, "❌ No stock in this range. Try another.")
         except: pass
 
     elif data == "back_start":
