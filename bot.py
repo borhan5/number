@@ -140,28 +140,29 @@ def auto_check_otp(chat_id, number, country_info):
             res = requests.get(f"{BASE_URL}/success-otp", headers=headers, timeout=10).json()
             if res['meta']['code'] == 200:
                 for o in res['data']['otps']:
-                    # নম্বর মিললে এবং মেসেজটি আগে পাঠানো না হয়ে থাকলে
                     if o['number'] == number and o['message'] not in sent_otps:
+                        # ইউজারকে ওটিপি পাঠানো
                         full_msg = (f"🎊 **NEW OTP RECEIVED!**\n\n"
                                    f"🌍 Country: {country_info}\n"
                                    f"📱 Number: `{number}`\n"
                                    f"💬 Message: `{o['message']}`")
                         bot.send_message(chat_id, full_msg, parse_mode="Markdown")
                         
+                        # গ্রুপে ওটিপি পাঠানো (বট ইউজার আইডি যুক্ত করা হয়েছে)
                         masked_num = mask_number(number)
                         group_msg = (f"📢 **NEW OTP LOG (borhan otp)**\n\n"
                                     f"🌍 Country: {country_info}\n"
                                     f"📱 Number: `{masked_num}`\n"
-                                    f"💬 Message: `{o['message']}`")
+                                    f"💬 Message: `{o['message']}`\n\n"
+                                    f"👤 Bot: @BSNUMBER_01bot")
                         bot.send_message(OTP_LOG_GROUP_ID, group_msg, parse_mode="Markdown")
                         
-                        sent_otps.append(o['message']) # ওটিপিটি সেভ করে রাখা
+                        sent_otps.append(o['message']) 
             time.sleep(5)
         except:
             time.sleep(5)
             continue
             
-    # সেশন শেষ হলে নোটিফিকেশন
     bot.send_message(chat_id, f"⌛ **Session Expired!**\nআপনার `{number}` নম্বরটির ১৫ মিনিটের ওটিপি সেশন শেষ হয়েছে।")
 
 # --- BOT HANDLERS ---
