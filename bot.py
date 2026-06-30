@@ -37,10 +37,10 @@ OTP_LOG_LINK = "https://t.me/Bsnumberotp"
 METHOD_LINK = "https://t.me/earntrick_BS" 
 CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 
-bot = telebot.TeleBot(API_TOKEN)
+bot = telebot.TeleBot(API_TOKEN, threaded=True)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- কমান্ড মেনু ---
+# --- কমান্ড মেনু সেট করা ---
 bot.set_my_commands([
     types.BotCommand("start", "Restart Bot"),
     types.BotCommand("lang", "Change Language"),
@@ -164,7 +164,7 @@ def auto_check_otp(chat_id, number, country_info):
         except:
             time.sleep(5)
             continue
-    # "Session Expired" মেসেজটি এখান থেকে সরিয়ে দেওয়া হয়েছে।
+    # এখান থেকে Session Expired মেসেজ পাঠানোর লাইনটি সম্পূর্ণ মুছে ফেলা হয়েছে।
 
 # --- HANDLERS ---
 @bot.message_handler(commands=['start'])
@@ -248,7 +248,12 @@ def lang(message):
 def help(message):
     bot.send_message(message.chat.id, f"🛠 Need help? Contact Admin: {ADMIN_HANDLE}")
 
+# --- MAIN BLOCK (Conflict Fix) ---
 if __name__ == "__main__":
     keep_alive() 
     print("BSNUMBER Bot is starting...")
-    bot.infinity_polling()
+    
+    bot.remove_webhook()
+    time.sleep(1)
+    
+    bot.infinity_polling(timeout=10, long_polling_timeout=10)
