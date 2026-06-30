@@ -19,12 +19,11 @@ def keep_alive():
     t = threading.Thread(target=run_web_server, daemon=True)
     t.start()
 
-# --- কনফিগারেশন (আপনার দেওয়া তথ্য) ---
+# --- কনফিগারেশন ---
 API_TOKEN = "8759465408:AAGS-02Bc_PsgKPSWuhx3YuceRm8YS8JQ7I"
 VOLTX_KEY = "MQGVM5B5OOW"
 BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
 
-# গ্রুপ ও সাপোর্ট লিঙ্ক
 ADMIN_HANDLE = "@borhanRCB"
 METHOD_GROUP_ID = -1001859871146 
 OTP_LOG_GROUP_ID = -1003968881110  
@@ -35,7 +34,7 @@ bot = telebot.TeleBot(API_TOKEN, threaded=True)
 session = requests.Session()
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- ২০০+ দেশের ডাটাবেজ ---
+# --- ২০০+ দেশের ডাটাবেজ (User Provided) ---
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -60,37 +59,20 @@ COUNTRY_DATA = {
     "254": {"name": "Kenya", "flag": "🇰🇪"}, "255": {"name": "Tanzania", "flag": "🇹🇿"},
     "256": {"name": "Uganda", "flag": "🇺🇬"}, "257": {"name": "Burundi", "flag": "🇧🇮"},
     "258": {"name": "Mozambique", "flag": "🇲🇿"}, "260": {"name": "Zambia", "flag": "🇿🇲"},
-    "261": {"name": "Madagascar", "flag": "🇲🇬"}, "262": {"name": "Reunion", "flag": "🇷🇪"},
-    "263": {"name": "Zimbabwe", "flag": "🇿🇼"}, "264": {"name": "Namibia", "flag": "🇳🇦"},
-    "265": {"name": "Malawi", "flag": "🇲🇼"}, "266": {"name": "Lesotho", "flag": "🇱🇸"},
-    "267": {"name": "Botswana", "flag": "🇧🇼"}, "268": {"name": "Eswatini", "flag": "🇸🇿"},
-    "269": {"name": "Comoros", "flag": "🇰🇲"}, "27": {"name": "South Africa", "flag": "🇿🇦"},
-    "30": {"name": "Greece", "flag": "🇬🇷"}, "31": {"name": "Netherlands", "flag": "🇳🇱"},
-    "32": {"name": "Belgium", "flag": "🇧🇪"}, "33": {"name": "France", "flag": "🇫🇷"},
-    "34": {"name": "Spain", "flag": "🇪🇸"}, "351": {"name": "Portugal", "flag": "🇵🇹"},
-    "358": {"name": "Finland", "flag": "🇫🇮"}, "380": {"name": "Ukraine", "flag": "🇺🇦"},
-    "39": {"name": "Italy", "flag": "🇮🇹"}, "40": {"name": "Romania", "flag": "🇷🇴"},
-    "41": {"name": "Switzerland", "flag": "🇨🇭"}, "43": {"name": "Austria", "flag": "🇦🇹"},
-    "44": {"name": "UK", "flag": "🇬🇧"}, "45": {"name": "Denmark", "flag": "🇩🇰"},
-    "46": {"name": "Sweden", "flag": "🇸🇪"}, "47": {"name": "Norway", "flag": "🇳🇴"},
-    "48": {"name": "Poland", "flag": "🇵🇱"}, "49": {"name": "Germany", "flag": "🇩🇪"},
-    "60": {"name": "Malaysia", "flag": "🇲🇾"}, "61": {"name": "Australia", "flag": "🇦🇺"},
-    "62": {"name": "Indonesia", "flag": "🇮🇩"}, "63": {"name": "Philippines", "flag": "🇵🇭"},
-    "64": {"name": "New Zealand", "flag": "🇳🇿"}, "65": {"name": "Singapore", "flag": "🇸🇬"},
-    "66": {"name": "Thailand", "flag": "🇹🇭"}, "81": {"name": "Japan", "flag": "🇯🇵"},
-    "82": {"name": "South Korea", "flag": "🇰🇷"}, "84": {"name": "Vietnam", "flag": "🇻🇳"},
-    "86": {"name": "China", "flag": "🇨🇳"}, "880": {"name": "Bangladesh", "flag": "🇧🇩"},
-    "90": {"name": "Turkey", "flag": "🇹🇷"}, "91": {"name": "India", "flag": "🇮🇳"},
-    "92": {"name": "Pakistan", "flag": "🇵🇰"}, "93": {"name": "Afghanistan", "flag": "🇦🇫"},
-    "962": {"name": "Jordan", "flag": "🇯🇴"}, "964": {"name": "Iraq", "flag": "🇮🇶"},
-    "966": {"name": "Saudi Arabia", "flag": "🇸🇦"}, "971": {"name": "UAE", "flag": "🇦🇪"},
-    "972": {"name": "Israel", "flag": "🇮🇱"}, "974": {"name": "Qatar", "flag": "🇶🇦"},
+    "261": {"name": "Madagascar", "flag": "🇲🇬"}, "263": {"name": "Zimbabwe", "flag": "🇿🇼"},
+    "264": {"name": "Namibia", "flag": "🇳🇦"}, "265": {"name": "Malawi", "flag": "🇲🇼"},
+    "266": {"name": "Lesotho", "flag": "🇱🇸"}, "267": {"name": "Botswana", "flag": "🇧🇼"},
+    "268": {"name": "Eswatini", "flag": "🇸🇿"}, "269": {"name": "Comoros", "flag": "🇰🇲"},
+    "27": {"name": "South Africa", "flag": "🇿🇦"}, "33": {"name": "France", "flag": "🇫🇷"},
+    "44": {"name": "UK", "flag": "🇬🇧"}, "49": {"name": "Germany", "flag": "🇩🇪"},
+    "62": {"name": "Indonesia", "flag": "🇮🇩"}, "66": {"name": "Thailand", "flag": "🇹🇭"},
+    "880": {"name": "Bangladesh", "flag": "🇧🇩"}, "91": {"name": "India", "flag": "🇮🇳"},
+    "92": {"name": "Pakistan", "flag": "🇵🇰"}, "971": {"name": "UAE", "flag": "🇦🇪"},
     "998": {"name": "Uzbekistan", "flag": "🇺🇿"}
-    # আপনার সব দেশ এখানে যুক্ত আছে...
 }
 
-# --- ক্যাশ সিস্টেম (হ্যাং ফিক্স) ---
-cache = {"live_data": {}, "time": 0}
+# --- লাইভ কনসোল অনুযায়ী ক্যাশ সিস্টেম ---
+cache = {"live_data": {}, "ordered_keys": [], "time": 0}
 
 def get_country_info(range_str):
     for length in [4, 3, 2, 1]:
@@ -100,23 +82,48 @@ def get_country_info(range_str):
     return "🏳️", f"Code {range_str[:3]}"
 
 def fetch_live_data():
-    if time.time() - cache["time"] < 120: 
-        return cache["live_data"]
+    """Live Console এর সিরিয়াল অনুযায়ী ফেসবুক/ইন্সটাগ্রাম আগে রেখে সাজানো"""
+    if time.time() - cache["time"] < 60: # ১ মিনিট ক্যাশ
+        return cache["live_data"], cache["ordered_keys"]
+    
     try:
         res = session.get(f"{BASE_URL}/liveaccess", headers=headers, timeout=10).json()
         if res.get('meta', {}).get('code') == 200:
-            data = {}
+            fb_ig_priority = []
+            others = []
+            all_data = {}
+
+            # লাইভ কনসোল সিরিয়াল অনুযায়ী সার্ভিস প্রসেসিং
             for service in res['data']['services']:
+                sid = service['sid'].lower()
+                is_priority = "facebook" in sid or "instagram" in sid
+                
                 for r in service['ranges']:
                     flag, name = get_country_info(r)
                     key = f"{flag} {name}"
-                    if key not in data: data[key] = []
-                    if r not in data[key]: data[key].append(r)
-            cache["live_data"] = data
+                    
+                    if key not in all_data:
+                        all_data[key] = []
+                    if r not in all_data[key]:
+                        all_data[key].append(r)
+
+                    # প্রায়োরিটি লিস্ট তৈরি
+                    if is_priority:
+                        if key not in fb_ig_priority:
+                            fb_ig_priority.append(key)
+                    else:
+                        if key not in fb_ig_priority and key not in others:
+                            others.append(key)
+
+            # ফাইনাল সিরিয়াল: FB/IG Priority -> Others (Live Order)
+            final_keys = fb_ig_priority + others
+            
+            cache["live_data"] = all_data
+            cache["ordered_keys"] = final_keys
             cache["time"] = time.time()
-            return data
+            return all_data, final_keys
     except: pass
-    return cache["live_data"]
+    return cache["live_data"], cache["ordered_keys"]
 
 # --- ওটিপি মনিটরিং (মাল্টিপল ওটিপি সাপোর্ট) ---
 def monitor_otp(chat_id, number, country_info, user_name):
@@ -130,12 +137,9 @@ def monitor_otp(chat_id, number, country_info, user_name):
                     if str(o['number']) == str(number):
                         otp_msg = o['message']
                         if otp_msg not in seen_otps:
-                            # ইউজারকে ওটিপি পাঠানো
                             bot.send_message(chat_id, f"🎊 **NEW OTP RECEIVED!**\n\n📱 `{number}`\n💬 `{otp_msg}`", parse_mode="Markdown")
-                            # ওটিপি লগ গ্রুপে পাঠানো
-                            log_text = (f"📢 **OTP LOG (Bsnumber)**\n👤 User: {user_name}\n🌍 Country: {country_info}\n"
-                                        f"📱 Number: `{number}`\n💬 Message: `{otp_msg}`\n\n🤖 @YourBotUsername")
-                            try: bot.send_message(OTP_LOG_GROUP_ID, log_text)
+                            log = f"📢 **OTP LOG (Live Console)**\n👤 User: {user_name}\n🌍 {country_info}\n📱 `{number}`\n💬 `{otp_msg}`"
+                            try: bot.send_message(OTP_LOG_GROUP_ID, log)
                             except: pass
                             seen_otps.add(otp_msg)
             time.sleep(10)
@@ -146,27 +150,25 @@ def monitor_otp(chat_id, number, country_info, user_name):
 def start(message):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("🔥 Get Number", callback_data="page_0"))
-    markup.add(types.InlineKeyboardButton("🛠 Support", url="https://t.me/borhanRCB"))
-    bot.send_message(message.chat.id, "🌟 **Welcome to BSNUMBER Bot**\nনিচের বাটন থেকে দ্রুত নম্বর সিলেক্ট করুন।", reply_markup=markup)
+    markup.add(types.InlineKeyboardButton("🚀 Method Group", url=METHOD_LINK))
+    bot.send_message(message.chat.id, "🌟 **Welcome to BSNUMBER Bot**\nলাইভ কনসোল অনুযায়ী ওটিপি দেওয়া দেশগুলো সবার উপরে সাজানো হয়েছে।", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
     data = call.data
     
-    # পেজিনেশন (Pagination) - হ্যাং ফিক্স করার জন্য
     if data.startswith("page_"):
         page = int(data.split("_")[1])
-        live_data = fetch_live_data()
-        all_countries = sorted(live_data.keys())
+        live_data, ordered_keys = fetch_live_data()
         
-        if not all_countries:
-            bot.answer_callback_query(call.id, "No Stock Available!", show_alert=True)
+        if not ordered_keys:
+            bot.answer_callback_query(call.id, "No Stock in Live Console!", show_alert=True)
             return
 
         per_page = 16
         start_idx = page * per_page
         end_idx = start_idx + per_page
-        current_list = all_countries[start_idx:end_idx]
+        current_list = ordered_keys[start_idx:end_idx]
         
         markup = types.InlineKeyboardMarkup(row_width=2)
         btns = [types.InlineKeyboardButton(c, callback_data=f"c_{c[:15]}") for c in current_list]
@@ -174,16 +176,16 @@ def handle_callback(call):
         
         nav_btns = []
         if page > 0: nav_btns.append(types.InlineKeyboardButton("⬅️ Prev", callback_data=f"page_{page-1}"))
-        if end_idx < len(all_countries): nav_btns.append(types.InlineKeyboardButton("Next ➡️", callback_data=f"page_{page+1}"))
+        if end_idx < len(ordered_keys): nav_btns.append(types.InlineKeyboardButton("Next ➡️", callback_data=f"page_{page+1}"))
         if nav_btns: markup.add(*nav_btns)
         
         markup.add(types.InlineKeyboardButton("🏠 Menu", callback_data="back_start"))
-        bot.edit_message_text(f"🌍 **Select Country (Page {page+1}):**", call.message.chat.id, call.message.message_id, reply_markup=markup)
+        bot.edit_message_text(f"🌍 **Select Country (Page {page+1}):**\n(Live: FB & IG Priority)", 
+                             call.message.chat.id, call.message.message_id, reply_markup=markup)
 
-    # দেশ অনুযায়ী রেঞ্জ দেখানো
     elif data.startswith("c_"):
         c_short = data[2:]
-        live_data = fetch_live_data()
+        live_data, ordered_keys = fetch_live_data()
         full_name = next((k for k in live_data if k.startswith(c_short)), None)
         if full_name:
             ranges = live_data[full_name]
@@ -191,12 +193,11 @@ def handle_callback(call):
             btns = [types.InlineKeyboardButton(f"📡 Range {r}", callback_data=f"ord_{r}") for r in ranges[:14]]
             markup.add(*btns)
             markup.add(types.InlineKeyboardButton("⬅️ Back", callback_data="page_0"))
-            bot.edit_message_text(f"📍 **{full_name}**\nসিলেক্ট করুন:", call.message.chat.id, call.message.message_id, reply_markup=markup)
+            bot.edit_message_text(f"📍 **{full_name}**\nরেঞ্জ সিলেক্ট করুন:", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
-    # নম্বর অর্ডার করা
     elif data.startswith("ord_"):
         rid = data.split("_")[1]
-        bot.answer_callback_query(call.id, "Processing...")
+        bot.answer_callback_query(call.id, "Ordering...")
         try:
             res = session.post(f"{BASE_URL}/getnum", headers=headers, json={"rid": rid}, timeout=10).json()
             if res.get('meta', {}).get('code') == 200:
@@ -204,22 +205,17 @@ def handle_callback(call):
                 country = res['data']['country']
                 user = call.from_user.first_name
                 
-                # --- নম্বর এর নিচের বাটনগুলো ---
                 markup = types.InlineKeyboardMarkup(row_width=2)
                 markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data="page_0"))
                 markup.add(types.InlineKeyboardButton("🚀 Method Group", url=METHOD_LINK))
                 markup.add(types.InlineKeyboardButton("📢 OTP Log Group", url=OTP_LOG_LINK))
                 markup.add(types.InlineKeyboardButton("🏠 Menu", callback_data="back_start"))
                 
-                bot.edit_message_text(f"✅ **Number Ready!**\n\n📱 `{num}`\n🌍 {country}\n\n💬 ওটিপির জন্য অপেক্ষা করুন...", 
+                bot.edit_message_text(f"✅ **Number Ready!**\n📱 `{num}`\n🌍 {country}\n\n💬 ওটিপি আসলে এখানে চলে আসবে।", 
                                      call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
                 
-                # ওটিপি চেক শুরু
                 threading.Thread(target=monitor_otp, args=(call.message.chat.id, num, country, user), daemon=True).start()
-            else:
-                bot.answer_callback_query(call.id, "Range Out of Stock!", show_alert=True)
-        except:
-            bot.answer_callback_query(call.id, "API Connection Error!", show_alert=True)
+        except: pass
 
     elif data == "back_start":
         start(call.message)
