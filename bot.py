@@ -4,9 +4,9 @@ import requests
 import threading
 import time
 from telebot import types
-from Flask import Flask
+from flask import Flask # এখানে f ছোট হাতের হবে
 
-# --- RENDER FIX (বট চালু রাখার জন্য) ---
+# --- RENDER FIX ---
 app = Flask('')
 
 @app.route('/')
@@ -32,7 +32,7 @@ ADMIN_HANDLE = "@BORHANSB"
 
 METHOD_GROUP_ID = -1001859871146 
 OTP_LOG_GROUP_ID = -1003968881110 
-OTP_LOG_LINK = "https://t.me/earntrick_BS" # এখানে আপনার ওটিপি লগ গ্রুপের লিঙ্ক দিন
+OTP_LOG_LINK = "https://t.me/earntrick_BS" # আপনার ওটিপি লগ গ্রুপের লিঙ্ক
 
 METHOD_LINK = "https://t.me/earntrick_BS" 
 CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
@@ -103,7 +103,6 @@ COUNTRY_DB = {
 }
 
 # --- FUNCTIONS ---
-
 def is_user_joined(user_id):
     try:
         status = bot.get_chat_member(METHOD_GROUP_ID, user_id).status
@@ -170,16 +169,7 @@ def auto_check_otp(chat_id, number, country_info):
             
     bot.send_message(chat_id, f"⌛ **Session Expired!**\nআপনার `{number}` নম্বরটির ১৫ মিনিটের ওটিপি সেশন শেষ হয়েছে।")
 
-# --- COMMAND HANDLERS ---
-
-@bot.message_handler(commands=['lang'])
-def change_lang(message):
-    bot.send_message(message.chat.id, "🌐 Only English language is supported currently.")
-
-@bot.message_handler(commands=['help'])
-def show_help(message):
-    bot.send_message(message.chat.id, f"🛠 Need Help? Contact Admin: {ADMIN_HANDLE}")
-
+# --- HANDLERS ---
 @bot.message_handler(commands=['start'])
 def start(message):
     user_id = message.from_user.id
@@ -243,7 +233,7 @@ def handle_callback(call):
             
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"order_{rid}"))
-            markup.add(types.InlineKeyboardButton("📢 OTP Log Group", url=OTP_LOG_LINK)) # ওটিপি গ্রুপ বাটন
+            markup.add(types.InlineKeyboardButton("📢 OTP Log Group", url=OTP_LOG_LINK))
             markup.add(types.InlineKeyboardButton("🏠 Menu", callback_data="back_start"))
             
             bot.edit_message_text(msg, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
@@ -257,8 +247,6 @@ def handle_callback(call):
     elif call.data == "admin":
         bot.send_message(call.message.chat.id, f"🛠 **BSNUMBER Support:**\n\n👤 Admin: {ADMIN_HANDLE}")
 
-# --- MAIN ---
 if __name__ == "__main__":
     keep_alive() 
-    print("BSNUMBER Bot is starting...")
-    bot.infinity_polling(timeout=10, long_polling_timeout=10)
+    bot.infinity_polling()
