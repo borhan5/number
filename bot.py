@@ -34,6 +34,7 @@ METHOD_GROUP_ID = -1001859871146
 OTP_LOG_GROUP_ID = -1003968881110  
 OTP_LOG_LINK = "https://t.me/Bsnumberotp" 
 
+# আপনার মেথড গ্রুপ লিঙ্ক
 METHOD_LINK = "https://t.me/earntrick_BS" 
 CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 
@@ -164,7 +165,6 @@ def auto_check_otp(chat_id, number, country_info):
         except:
             time.sleep(5)
             continue
-    # Session Expired মেসেজ সরানো হয়েছে
 
 # --- HANDLERS ---
 @bot.message_handler(commands=['start'])
@@ -225,8 +225,10 @@ def handle_callback(call):
             country = res['data']['country']
             msg = (f"✅ **Number Ready!**\n\n📱 `{num}`\n🌍 {country}")
             
+            # নম্বর পাওয়ার পর বাটনগুলো এখানে সেট করা হয়েছে
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"order_{rid}"))
+            markup.add(types.InlineKeyboardButton("🚀 Method Group", url=METHOD_LINK)) # মেথড গ্রুপ বাটন যুক্ত করা হয়েছে
             markup.add(types.InlineKeyboardButton("📢 OTP Log Group", url=OTP_LOG_LINK))
             markup.add(types.InlineKeyboardButton("🏠 Menu", callback_data="back_start"))
             
