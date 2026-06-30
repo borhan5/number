@@ -6,7 +6,7 @@ import time
 from telebot import types
 from flask import Flask
 
-# --- RENDER FIX ---
+# --- RENDER FIX (বট চালু রাখার জন্য) ---
 app = Flask('')
 
 @app.route('/')
@@ -40,7 +40,7 @@ CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 bot = telebot.TeleBot(API_TOKEN, threaded=True)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- কমান্ড মেনু সেট করা ---
+# --- কমান্ড মেনু ---
 bot.set_my_commands([
     types.BotCommand("start", "Restart Bot"),
     types.BotCommand("lang", "Change Language"),
@@ -164,7 +164,7 @@ def auto_check_otp(chat_id, number, country_info):
         except:
             time.sleep(5)
             continue
-    # এখান থেকে Session Expired মেসেজ পাঠানোর লাইনটি সম্পূর্ণ মুছে ফেলা হয়েছে।
+    # Session Expired মেসেজ সরানো হয়েছে
 
 # --- HANDLERS ---
 @bot.message_handler(commands=['start'])
@@ -253,7 +253,11 @@ if __name__ == "__main__":
     keep_alive() 
     print("BSNUMBER Bot is starting...")
     
-    bot.remove_webhook()
-    time.sleep(1)
-    
-    bot.infinity_polling(timeout=10, long_polling_timeout=10)
+    while True:
+        try:
+            bot.remove_webhook()
+            time.sleep(2)
+            bot.infinity_polling(timeout=20, long_polling_timeout=20, skip_pending=True)
+        except Exception as e:
+            print(f"Conflict Error: {e}")
+            time.sleep(5)
