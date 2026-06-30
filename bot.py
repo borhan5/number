@@ -4,7 +4,7 @@ import requests
 import threading
 import time
 from telebot import types
-from flask import Flask
+from Flask import Flask
 
 # --- RENDER FIX (বট চালু রাখার জন্য) ---
 app = Flask('')
@@ -32,6 +32,7 @@ ADMIN_HANDLE = "@BORHANSB"
 
 METHOD_GROUP_ID = -1001859871146 
 OTP_LOG_GROUP_ID = -1003968881110 
+OTP_LOG_LINK = "https://t.me/earntrick_BS" # এখানে আপনার ওটিপি লগ গ্রুপের লিঙ্ক দিন
 
 METHOD_LINK = "https://t.me/earntrick_BS" 
 CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
@@ -39,7 +40,7 @@ CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 bot = telebot.TeleBot(API_TOKEN)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- বট মেনু কমান্ড সেট করা (স্ক্রিনশটের মতো) ---
+# --- বট মেনু কমান্ড সেট করা ---
 bot.set_my_commands([
     types.BotCommand("start", "Restart Bot"),
     types.BotCommand("lang", "Change Language"),
@@ -169,17 +170,15 @@ def auto_check_otp(chat_id, number, country_info):
             
     bot.send_message(chat_id, f"⌛ **Session Expired!**\nআপনার `{number}` নম্বরটির ১৫ মিনিটের ওটিপি সেশন শেষ হয়েছে।")
 
-# --- ADDITIONAL COMMAND HANDLERS ---
+# --- COMMAND HANDLERS ---
 
 @bot.message_handler(commands=['lang'])
 def change_lang(message):
-    bot.send_message(message.chat.id, "🌐 **Language selection is currently disabled. Only English is available.**")
+    bot.send_message(message.chat.id, "🌐 Only English language is supported currently.")
 
 @bot.message_handler(commands=['help'])
 def show_help(message):
-    bot.send_message(message.chat.id, f"🛠 **Need Help?**\n\nContact Admin: {ADMIN_HANDLE}\nOr visit our group: {CHANNEL_LINK}")
-
-# --- BOT HANDLERS ---
+    bot.send_message(message.chat.id, f"🛠 Need Help? Contact Admin: {ADMIN_HANDLE}")
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -244,6 +243,7 @@ def handle_callback(call):
             
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"order_{rid}"))
+            markup.add(types.InlineKeyboardButton("📢 OTP Log Group", url=OTP_LOG_LINK)) # ওটিপি গ্রুপ বাটন
             markup.add(types.InlineKeyboardButton("🏠 Menu", callback_data="back_start"))
             
             bot.edit_message_text(msg, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
