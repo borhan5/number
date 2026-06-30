@@ -6,7 +6,7 @@ import time
 from telebot import types
 from flask import Flask
 
-# --- RENDER FIX (বট চালু রাখার জন্য) ---
+# --- RENDER FIX ---
 app = Flask('')
 
 @app.route('/')
@@ -28,7 +28,7 @@ VOLTX_KEY = "MQGVM5B5OOW"
 BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
 
 ADMIN_ID = 8250359361
-ADMIN_HANDLE = "@borhanRCB" # আপনার নতুন অ্যাডমিন হ্যান্ডেল এখানে সেট করা হয়েছে
+ADMIN_HANDLE = "@borhanRCB" 
 
 METHOD_GROUP_ID = -1001859871146 
 OTP_LOG_GROUP_ID = -1003968881110  
@@ -40,7 +40,7 @@ CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 bot = telebot.TeleBot(API_TOKEN)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- বট মেনু কমান্ড সেট করা (Restart, Lang, Help) ---
+# --- কমান্ড মেনু ---
 bot.set_my_commands([
     types.BotCommand("start", "Restart Bot"),
     types.BotCommand("lang", "Change Language"),
@@ -164,7 +164,7 @@ def auto_check_otp(chat_id, number, country_info):
         except:
             time.sleep(5)
             continue
-    bot.send_message(chat_id, f"⌛ **Session Expired!**")
+    # "Session Expired" মেসেজটি এখান থেকে সরিয়ে দেওয়া হয়েছে।
 
 # --- HANDLERS ---
 @bot.message_handler(commands=['start'])
