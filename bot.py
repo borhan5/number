@@ -23,7 +23,7 @@ def keep_alive():
 # ---------------------------------------------------
 
 # --- CONFIGURATION ---
-API_TOKEN = "8953289994:AAG81aNNMQiKorc6PP4XpE7Tme9iPK8d4ME"
+API_TOKEN = "8953289994:AAHnZ9Cie9KC-5kUtB_joCkWM423DuIEJhs"
 VOLTX_KEY = "MQGVM5B5OOW"
 BASE_URL = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
 
@@ -31,7 +31,7 @@ ADMIN_ID = 8250359361
 ADMIN_HANDLE = "@BORHANSB" 
 
 METHOD_GROUP_ID = -1001859871146 
-OTP_LOG_GROUP_ID = -1003968881110 
+OTP_LOG_GROUP_ID = -1003968881110 # "borhan otp" গ্রুপ আইডি
 
 METHOD_LINK = "https://t.me/earntrick_BS" 
 CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
@@ -39,7 +39,7 @@ CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 bot = telebot.TeleBot(API_TOKEN)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- বিশ্বের প্রায় সব দেশের ডাটাবেজ (আপনার দেওয়া পূর্ণাঙ্গ লিস্ট) ---
+# --- দেশের ডাটাবেজ (২০০+ দেশ) ---
 COUNTRY_DB = {
     "1": {"n": "USA/Canada", "f": "🇺🇸"}, "7": {"n": "Russia/Kazakhstan", "f": "🇷🇺"}, "20": {"n": "Egypt", "f": "🇪🇬"},
     "27": {"n": "South Africa", "f": "🇿🇦"}, "30": {"n": "Greece", "f": "🇬🇷"}, "31": {"n": "Netherlands", "f": "🇳🇱"},
@@ -129,47 +129,41 @@ def fetch_live_data():
         return live_stats
     except: return {}
 
-# ১৫ মিনিটের মাল্টি-ওটিপি এবং ডুপ্লিকেট ফিক্সড লজিক
+# ১৫ মিনিটের মাল্টি-ওটিপি লজিক
 def auto_check_otp(chat_id, number, country_info):
     start_time = time.time()
-    sent_otps = set() # ওটিপি মেসেজ ট্র্যাক করার জন্য সেট (যাতে একই কোড বারবার না যায়)
-    duration = 15 * 60 # ১৫ মিনিট (৯০০ সেকেন্ড)
+    sent_otps = [] 
+    duration = 15 * 60 # ১৫ মিনিট
 
     while time.time() - start_time < duration:
         try:
             res = requests.get(f"{BASE_URL}/success-otp", headers=headers, timeout=10).json()
             if res['meta']['code'] == 200:
                 for o in res['data']['otps']:
-                    # যদি নম্বর মিলে যায় এবং মেসেজটি আগে পাঠানো না হয়ে থাকে
-                    if str(o['number']) == str(number):
-                        otp_content = o['message'].strip()
+                    if o['number'] == number and o['message'] not in sent_otps:
+                        # ইউজারকে পাঠানো মেসেজ
+                        full_msg = (f"🎊 **NEW OTP RECEIVED!**\n\n"
+                                   f"🌍 Country: {country_info}\n"
+                                   f"📱 Number: `{number}`\n"
+                                   f"💬 Message: `{o['message']}`")
+                        bot.send_message(chat_id, full_msg, parse_mode="Markdown")
                         
-                        if otp_content not in sent_otps:
-                            # ইউজারকে ওটিপি পাঠানো
-                            full_msg = (f"🎊 **NEW OTP RECEIVED!**\n\n"
-                                       f"🌍 Country: {country_info}\n"
-                                       f"📱 Number: `{number}`\n"
-                                       f"💬 Message: `{otp_content}`")
-                            bot.send_message(chat_id, full_msg, parse_mode="Markdown")
-                            
-                            # গ্রুপে ওটিপি পাঠানো
-                            masked_num = mask_number(number)
-                            group_msg = (f"📢 **NEW OTP LOG (borhan otp)**\n\n"
-                                        f"🌍 Country: {country_info}\n"
-                                        f"📱 Number: `{masked_num}`\n"
-                                        f"💬 Message: `{otp_content}`\n\n"
-                                        f"👤 Bot: @BSNUMBER_01bot")
-                            bot.send_message(OTP_LOG_GROUP_ID, group_msg, parse_mode="Markdown")
-                            
-                            # মেসেজটি সেভ করে রাখা যাতে পুনরায় না পাঠানো হয়
-                            sent_otps.add(otp_content)
-            
-            time.sleep(5) # প্রতি ৫ সেকেন্ড অন্তর চেক করবে
+                        # লোগিং গ্রুপে পাঠানো মেসেজ (এখানে @BorhanNumBot যুক্ত করা হয়েছে)
+                        masked_num = mask_number(number)
+                        group_msg = (f"📢 **NEW OTP LOG (borhan otp)**\n\n"
+                                    f"🌍 Country: {country_info}\n"
+                                    f"📱 Number: `{masked_num}`\n"
+                                    f"💬 Message: `{o['message']}`\n\n"
+                                    f"🤖 @BorhanNumBot")
+                        bot.send_message(OTP_LOG_GROUP_ID, group_msg, parse_mode="Markdown")
+                        
+                        sent_otps.append(o['message'])
+            time.sleep(5)
         except:
             time.sleep(5)
             continue
             
-    bot.send_message(chat_id, f"⌛ **Session Expired!**\nআপনার `{number}` নম্বরটির ১৫ মিনিটের সেশন শেষ হয়েছে।")
+    bot.send_message(chat_id, f"⌛ **Session Expired!**\nআপনার `{number}` নম্বরটির ১৫ মিনিটের ওটিপি সেশন শেষ হয়েছে।")
 
 # --- BOT HANDLERS ---
 
@@ -180,7 +174,7 @@ def start(message):
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("🚀 Join Our Method Group", url=METHOD_LINK))
         markup.add(types.InlineKeyboardButton("✅ Joined (Check Again)", callback_data="check_joined"))
-        bot.send_message(message.chat.id, "⚠️ **Access Denied!**\n\nবটটি ব্যবহার করতে হলে আমাদের মেথড গ্রুপে জয়েন থাকতে হবে।", reply_markup=markup)
+        bot.send_message(message.chat.id, "⚠️ **Access Denied!**\n\nবটটি ব্যবহার করতে হলে আপনাকে আমাদের মেথড গ্রুপে জয়েন থাকতে হবে।", reply_markup=markup)
         return
 
     markup = types.InlineKeyboardMarkup(row_width=2)
@@ -211,7 +205,7 @@ def handle_callback(call):
             bot.answer_callback_query(call.id, "No Live Ranges Available!", show_alert=True)
             return
         markup = types.InlineKeyboardMarkup(row_width=2)
-        btns = [types.InlineKeyboardButton(f"{c}", callback_data=f"list_{c}") for c in live_data.keys()]
+        btns = [types.InlineKeyboardButton(f"{c} ({len(r)})", callback_data=f"list_{c}") for c, r in live_data.items()]
         markup.add(*btns)
         markup.add(types.InlineKeyboardButton("⬅️ Back Menu", callback_data="back_start"))
         bot.edit_message_text("🌍 **Select Country:**", call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
@@ -233,7 +227,7 @@ def handle_callback(call):
             num = res['data']['no_plus_number']
             country = res['data']['country']
             msg = (f"✅ **Number Ready!**\n\n📱 `{num}`\n🌍 {country}\n\n"
-                   f"বট ১৫ মিনিট পর্যন্ত ওটিপি চেক করবে।")
+                   f"বট ১৫ মিনিট পর্যন্ত ওটিপি চেক করবে। কোড না আসলে 'Change Number' ক্লিক করুন।")
             
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"order_{rid}"))
