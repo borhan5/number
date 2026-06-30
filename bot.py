@@ -6,7 +6,7 @@ import time
 from telebot import types
 from flask import Flask
 
-# --- RENDER FIX (বট চালু রাখার জন্য) ---
+# --- RENDER FIX ---
 app = Flask('')
 
 @app.route('/')
@@ -38,6 +38,9 @@ CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 
 bot = telebot.TeleBot(API_TOKEN)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
+
+# বট অন/অফ স্ট্যাটাস
+BOT_STATUS = True 
 
 # --- দেশের ডাটাবেজ (২০০+ দেশ) ---
 COUNTRY_DB = {
@@ -140,18 +143,17 @@ def auto_check_otp(chat_id, number, country_info):
             if res['meta']['code'] == 200:
                 for o in res['data']['otps']:
                     if o['number'] == number and o['message'] not in sent_otps:
-                        full_msg = (f"🎊 *NEW OTP RECEIVED!*\n\n"
-                                   f"🌍 *Country:* {country_info}\n"
-                                   f"📱 *Number:* `{number}`\n"
-                                   f"💬 *Message:* `{o['message']}`")
+                        full_msg = (f"🎊 **NEW OTP RECEIVED!**\n\n"
+                                   f"🌍 Country: {country_info}\n"
+                                   f"📱 Number: `{number}`\n"
+                                   f"💬 Message: `{o['message']}`")
                         bot.send_message(chat_id, full_msg, parse_mode="Markdown")
                         
                         masked_num = mask_number(number)
-                        group_msg = (f"📢 *OTP LOG REPORT*\n"
-                                    f"━━━━━━━━━━━━━━━\n"
-                                    f"🌍 *Country:* {country_info}\n"
-                                    f"📱 *Number:* `{masked_num}`\n"
-                                    f"💬 *Message:* `{o['message']}`\n\n"
+                        group_msg = (f"📢 **NEW OTP LOG (borhan otp)**\n\n"
+                                    f"🌍 Country: {country_info}\n"
+                                    f"📱 Number: `{masked_num}`\n"
+                                    f"💬 Message: `{o['message']}`\n\n"
                                     f"🤖 @BorhanNumBot")
                         bot.send_message(OTP_LOG_GROUP_ID, group_msg, parse_mode="Markdown")
                         
@@ -161,38 +163,55 @@ def auto_check_otp(chat_id, number, country_info):
             time.sleep(5)
             continue
             
-    bot.send_message(chat_id, f"⌛ *Session Expired!*\nআপনার `{number}` নম্বরটির ১৫ মিনিটের ওটিপি সেশন শেষ হয়েছে।")
+    bot.send_message(chat_id, f"⌛ **Session Expired!**\nআপনার `{number}` নম্বরটির ১৫ মিনিটের ওটিপি সেশন শেষ হয়েছে।")
+
+# --- ADMIN COMMANDS (ON/OFF) ---
+
+@bot.message_handler(commands=['off'])
+def turn_off(message):
+    if message.from_user.id == ADMIN_ID:
+        global BOT_STATUS
+        BOT_STATUS = False
+        bot.reply_to(message, "🛑 **Bot has been turned OFF.** ইউজাররা এখন মেনু ব্যবহার করতে পারবে না।")
+
+@bot.message_handler(commands=['on'])
+def turn_on(message):
+    if message.from_user.id == ADMIN_ID:
+        global BOT_STATUS
+        BOT_STATUS = True
+        bot.reply_to(message, "✅ **Bot is now ON and Active.**")
 
 # --- BOT HANDLERS ---
 
 @bot.message_handler(commands=['start'])
 def start(message):
+    # স্ট্যাটাস চেক
+    if not BOT_STATUS and message.from_user.id != ADMIN_ID:
+        bot.send_message(message.chat.id, "⚠️ **বট বর্তমানে মেইনটেন্যান্সের জন্য অফ আছে। পরে চেষ্টা করুন।**")
+        return
+
     user_id = message.from_user.id
     if not is_user_joined(user_id):
         markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("🚀 Join Method Group", url=METHOD_LINK))
-        markup.add(types.InlineKeyboardButton("✅ Check Join Status", callback_data="check_joined"))
-        bot.send_message(message.chat.id, "❌ *Access Denied!*\n\nবটটি ব্যবহার করতে হলে আপনাকে আমাদের মেথড গ্রুপে জয়েন থাকতে হবে।", reply_markup=markup, parse_mode="Markdown")
+        markup.add(types.InlineKeyboardButton("🚀 Join Our Method Group", url=METHOD_LINK))
+        markup.add(types.InlineKeyboardButton("✅ Joined (Check Again)", callback_data="check_joined"))
+        bot.send_message(message.chat.id, "⚠️ **Access Denied!**\n\nবটটি ব্যবহার করতে হলে আপনাকে আমাদের মেথড গ্রুপে জয়েন থাকতে হবে।", reply_markup=markup)
         return
 
     markup = types.InlineKeyboardMarkup(row_width=2)
-    markup.add(types.InlineKeyboardButton("🔥 GET NUMBER", callback_data="buy_menu"))
-    markup.add(types.InlineKeyboardButton("👤 PROFILE", callback_data="profile"),
-               types.InlineKeyboardButton("🛠 ADMIN", callback_data="admin"))
-    markup.add(types.InlineKeyboardButton("📢 UPDATES", url=CHANNEL_LINK))
+    markup.add(types.InlineKeyboardButton("🔥 Number Nin", callback_data="buy_menu"))
+    markup.add(types.InlineKeyboardButton("👤 Profile", callback_data="profile"),
+               types.InlineKeyboardButton("🛠 Admin Support", callback_data="admin"))
     
-    welcome_text = (
-        "👋 *Welcome to BSNUMBER Bot*\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "⚡ *Fast & Secure OTP Service*\n"
-        "💎 *Status:* Online & Active\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "নিচের বাটন থেকে নম্বর সংগ্রহ করুন।"
-    )
-    bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
+    bot.send_message(message.chat.id, "🌟 **Welcome to BSNUMBER Bot** 🌟\n\nনিচের বাটন থেকে দ্রুত নম্বর সিলেক্ট করুন।", reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
+    # স্ট্যাটাস চেক
+    if not BOT_STATUS and call.from_user.id != ADMIN_ID:
+        bot.answer_callback_query(call.id, "বট বর্তমানে অফ আছে।", show_alert=True)
+        return
+
     user_id = call.from_user.id
     if not is_user_joined(user_id) and call.data != "check_joined":
         bot.answer_callback_query(call.id, "Please join the group first!", show_alert=True)
@@ -203,29 +222,28 @@ def handle_callback(call):
             bot.delete_message(call.message.chat.id, call.message.message_id)
             start(call.message)
         else:
-            bot.answer_callback_query(call.id, "⚠️ আপনি এখনো জয়েন করেননি!", show_alert=True)
+            bot.answer_callback_query(call.id, "আপনি এখনো জয়েন করেননি!", show_alert=True)
 
     elif call.data == "buy_menu":
         live_data = fetch_live_data()
         if not live_data:
-            bot.answer_callback_query(call.id, "No Stock Available!", show_alert=True)
+            bot.answer_callback_query(call.id, "No Live Ranges Available!", show_alert=True)
             return
         markup = types.InlineKeyboardMarkup(row_width=2)
         btns = [types.InlineKeyboardButton(f"{c} ({len(r)})", callback_data=f"list_{c}") for c, r in live_data.items()]
         markup.add(*btns)
-        markup.add(types.InlineKeyboardButton("⬅️ BACK TO MENU", callback_data="back_start"))
-        
-        bot.edit_message_text("🌍 *SELECT YOUR COUNTRY:*\n━━━━━━━━━━━━━━━", call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
+        markup.add(types.InlineKeyboardButton("⬅️ Back Menu", callback_data="back_start"))
+        bot.edit_message_text("🌍 **Select Country:**", call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
 
     elif call.data.startswith("list_"):
         c_key = call.data.replace("list_", "")
         live_data = fetch_live_data()
         ranges = live_data.get(c_key, [])
         markup = types.InlineKeyboardMarkup(row_width=2)
-        btns = [types.InlineKeyboardButton(f"📡 Range: {r}", callback_data=f"order_{r}") for r in ranges[:14]]
+        btns = [types.InlineKeyboardButton(f"📡 Range: {r}", callback_data=f"order_{r}") for r in ranges[:12]]
         markup.add(*btns)
-        markup.add(types.InlineKeyboardButton("⬅️ BACK", callback_data="buy_menu"))
-        bot.edit_message_text(f"📍 *Available Ranges for {c_key}*\n━━━━━━━━━━━━━━━", call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
+        markup.add(types.InlineKeyboardButton("⬅️ Back", callback_data="buy_menu"))
+        bot.edit_message_text(f"📍 **{c_key}**", call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
 
     elif call.data.startswith("order_"):
         rid = call.data.split("_")[1].replace("XXX", "")
@@ -233,38 +251,24 @@ def handle_callback(call):
         if res['meta']['code'] == 200:
             num = res['data']['no_plus_number']
             country = res['data']['country']
-            msg = (f"✅ *Number Generated!*\n\n"
-                   f"📱 *Number:* `{num}`\n"
-                   f"🌍 *Country:* {country}\n"
-                   f"━━━━━━━━━━━━━━━\n"
-                   f"⏳ বট ১৫ মিনিট ওটিপি চেক করবে।")
+            msg = (f"✅ **Number Ready!**\n\n📱 `{num}`\n🌍 {country}\n\n"
+                   f"বট ১৫ মিনিট পর্যন্ত ওটিপি চেক করবে। কোড না আসলে 'Change Number' ক্লিক করুন।")
             
             markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("🔄 CHANGE NUMBER", callback_data=f"order_{rid}"))
-            markup.add(types.InlineKeyboardButton("🏠 HOME", callback_data="back_start"))
+            markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"order_{rid}"))
+            markup.add(types.InlineKeyboardButton("👥 Group", url=CHANNEL_LINK),
+                       types.InlineKeyboardButton("📖 Method", url=METHOD_LINK))
             
             bot.edit_message_text(msg, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
             threading.Thread(target=auto_check_otp, args=(call.message.chat.id, num, country)).start()
         else:
-            bot.answer_callback_query(call.id, "❌ Out of Stock!", show_alert=True)
+            bot.answer_callback_query(call.id, "No Stock!", show_alert=True)
 
     elif call.data == "back_start":
-        bot.delete_message(call.message.chat.id, call.message.message_id)
         start(call.message)
 
-    elif call.data == "profile":
-        profile_text = (
-            f"👤 *USER PROFILE*\n"
-            f"━━━━━━━━━━━━━━━\n"
-            f"🆔 *ID:* `{user_id}`\n"
-            f"👤 *Name:* {call.from_user.first_name}\n"
-            f"━━━━━━━━━━━━━━━"
-        )
-        bot.answer_callback_query(call.id, "Profile loaded")
-        bot.send_message(call.message.chat.id, profile_text, parse_mode="Markdown")
-
     elif call.data == "admin":
-        bot.send_message(call.message.chat.id, f"🛠 *ADMIN SUPPORT:*\n\n👤 Admin: {ADMIN_HANDLE}\n💬 কোনো সমস্যা হলে যোগাযোগ করুন।", parse_mode="Markdown")
+        bot.send_message(call.message.chat.id, f"🛠 **BSNUMBER Support:**\n\n👤 Admin: {ADMIN_HANDLE}")
 
 # --- MAIN ---
 if __name__ == "__main__":
