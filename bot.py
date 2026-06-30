@@ -6,7 +6,7 @@ import time
 from telebot import types
 from flask import Flask
 
-# --- RENDER FIX ---
+# --- RENDER FIX (বট চালু রাখার জন্য) ---
 app = Flask('')
 
 @app.route('/')
@@ -39,8 +39,12 @@ CHANNEL_LINK = "https://t.me/+3MsGv1ySkEQ2ODBl"
 bot = telebot.TeleBot(API_TOKEN)
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# বট অন/অফ স্ট্যাটাস
-BOT_STATUS = True 
+# --- বট মেনু কমান্ড সেট করা (স্ক্রিনশটের মতো) ---
+bot.set_my_commands([
+    types.BotCommand("start", "Restart Bot"),
+    types.BotCommand("lang", "Change Language"),
+    types.BotCommand("help", "Show Help")
+])
 
 # --- দেশের ডাটাবেজ (২০০+ দেশ) ---
 COUNTRY_DB = {
@@ -165,31 +169,20 @@ def auto_check_otp(chat_id, number, country_info):
             
     bot.send_message(chat_id, f"⌛ **Session Expired!**\nআপনার `{number}` নম্বরটির ১৫ মিনিটের ওটিপি সেশন শেষ হয়েছে।")
 
-# --- ADMIN COMMANDS (ON/OFF) ---
+# --- ADDITIONAL COMMAND HANDLERS ---
 
-@bot.message_handler(commands=['off'])
-def turn_off(message):
-    if message.from_user.id == ADMIN_ID:
-        global BOT_STATUS
-        BOT_STATUS = False
-        bot.reply_to(message, "🛑 **Bot has been turned OFF.** ইউজাররা এখন মেনু ব্যবহার করতে পারবে না।")
+@bot.message_handler(commands=['lang'])
+def change_lang(message):
+    bot.send_message(message.chat.id, "🌐 **Language selection is currently disabled. Only English is available.**")
 
-@bot.message_handler(commands=['on'])
-def turn_on(message):
-    if message.from_user.id == ADMIN_ID:
-        global BOT_STATUS
-        BOT_STATUS = True
-        bot.reply_to(message, "✅ **Bot is now ON and Active.**")
+@bot.message_handler(commands=['help'])
+def show_help(message):
+    bot.send_message(message.chat.id, f"🛠 **Need Help?**\n\nContact Admin: {ADMIN_HANDLE}\nOr visit our group: {CHANNEL_LINK}")
 
 # --- BOT HANDLERS ---
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    # স্ট্যাটাস চেক
-    if not BOT_STATUS and message.from_user.id != ADMIN_ID:
-        bot.send_message(message.chat.id, "⚠️ **বট বর্তমানে মেইনটেন্যান্সের জন্য অফ আছে। পরে চেষ্টা করুন।**")
-        return
-
     user_id = message.from_user.id
     if not is_user_joined(user_id):
         markup = types.InlineKeyboardMarkup()
@@ -207,11 +200,6 @@ def start(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
-    # স্ট্যাটাস চেক
-    if not BOT_STATUS and call.from_user.id != ADMIN_ID:
-        bot.answer_callback_query(call.id, "বট বর্তমানে অফ আছে।", show_alert=True)
-        return
-
     user_id = call.from_user.id
     if not is_user_joined(user_id) and call.data != "check_joined":
         bot.answer_callback_query(call.id, "Please join the group first!", show_alert=True)
@@ -227,7 +215,7 @@ def handle_callback(call):
     elif call.data == "buy_menu":
         live_data = fetch_live_data()
         if not live_data:
-            bot.answer_callback_query(call.id, "No Live Ranges Available!", show_alert=True)
+            bot.answer_callback_query(call.id, "No Stock!", show_alert=True)
             return
         markup = types.InlineKeyboardMarkup(row_width=2)
         btns = [types.InlineKeyboardButton(f"{c} ({len(r)})", callback_data=f"list_{c}") for c, r in live_data.items()]
@@ -252,12 +240,11 @@ def handle_callback(call):
             num = res['data']['no_plus_number']
             country = res['data']['country']
             msg = (f"✅ **Number Ready!**\n\n📱 `{num}`\n🌍 {country}\n\n"
-                   f"বট ১৫ মিনিট পর্যন্ত ওটিপি চেক করবে। কোড না আসলে 'Change Number' ক্লিক করুন।")
+                   f"বট ১৫ মিনিট পর্যন্ত ওটিপি চেক করবে।")
             
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("🔄 Change Number", callback_data=f"order_{rid}"))
-            markup.add(types.InlineKeyboardButton("👥 Group", url=CHANNEL_LINK),
-                       types.InlineKeyboardButton("📖 Method", url=METHOD_LINK))
+            markup.add(types.InlineKeyboardButton("🏠 Menu", callback_data="back_start"))
             
             bot.edit_message_text(msg, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
             threading.Thread(target=auto_check_otp, args=(call.message.chat.id, num, country)).start()
