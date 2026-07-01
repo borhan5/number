@@ -35,7 +35,7 @@ bot = telebot.TeleBot(API_TOKEN, threaded=True)
 session = requests.Session()
 headers = {"mauthapi": VOLTX_KEY, "Content-Type": "application/json"}
 
-# --- ২০০+ দেশের ডাটাবেজ (সম্পূর্ণটি রাখা হয়েছে) ---
+# --- ২০০+ দেশের ডাটাবেজ ---
 COUNTRY_DATA = {
     "1": {"name": "USA/Canada", "flag": "🇺🇸"}, "7": {"name": "Russia/Kazakhstan", "flag": "🇷🇺"},
     "20": {"name": "Egypt", "flag": "🇪🇬"}, "211": {"name": "South Sudan", "flag": "🇸🇸"},
@@ -72,6 +72,20 @@ COUNTRY_DATA = {
     "998": {"name": "Uzbekistan", "flag": "🇺🇿"}
 }
 
+# --- উন্নত ওটিপি এক্সট্রাক্ট ফাংশন (আপডেটেড) ---
+def extract_otp(text):
+    # ১. প্রথমে চেক করবে ৩+৩ ফরম্যাটে স্পেস দিয়ে কোড আছে কি না (যেমন: 139 265)
+    match_with_space = re.search(r'\b(\d{3})\s(\d{3})\b', text)
+    if match_with_space:
+        return f"{match_with_space.group(1)}{match_with_space.group(2)}"
+    
+    # ২. যদি স্পেস ছাড়া ৪ থেকে ৮ ডিজিটের কোড থাকে (যেমন: 123456)
+    match_straight = re.search(r'\b\d{4,8}\b', text)
+    if match_straight:
+        return match_straight.group(0)
+    
+    return "No Code Found"
+
 # --- ক্যাশ সিস্টেম ---
 cache = {"live_data": {}, "ordered_keys": [], "time": 0}
 
@@ -81,11 +95,6 @@ def get_country_info(range_str):
         if code in COUNTRY_DATA:
             return COUNTRY_DATA[code]['flag'], COUNTRY_DATA[code]['name']
     return "🏳️", f"Code {range_str[:3]}"
-
-# --- ওটিপি এক্সট্রাক্ট ফাংশন (নতুন যোগ করা হয়েছে) ---
-def extract_otp(text):
-    match = re.search(r'\b\d{4,8}\b', text)
-    return match.group(0) if match else "No Code Found"
 
 def fetch_live_data():
     if time.time() - cache["time"] < 60:
@@ -114,7 +123,7 @@ def fetch_live_data():
     except: pass
     return cache["live_data"], cache["ordered_keys"]
 
-# --- ওটিপি মনিটরিং (OTP Extraction সহ আপডেট করা হয়েছে) ---
+# --- ওটিপি মনিটরিং ---
 def monitor_otp(chat_id, number, country_info, user_name):
     start_time = time.time()
     seen_otps = set()
@@ -126,7 +135,7 @@ def monitor_otp(chat_id, number, country_info, user_name):
                     if str(o['number']) == str(number):
                         otp_msg = o['message']
                         if otp_msg not in seen_otps:
-                            # এখানে ওটিপি এক্সট্রাক্ট করা হচ্ছে
+                            # এখানে নতুন এক্সট্রাক্ট ফাংশন ব্যবহার হচ্ছে
                             extracted_code = extract_otp(otp_msg)
                             
                             otp_text = (
@@ -154,7 +163,7 @@ def monitor_otp(chat_id, number, country_info, user_name):
             time.sleep(10)
         except: time.sleep(10)
 
-# --- বটের কমান্ড হ্যান্ডলার (আপনার অরিজিনাল সিস্টেম) ---
+# --- বটের কমান্ড হ্যান্ডলার ---
 @bot.message_handler(commands=['start'])
 def start(message):
     welcome_text = (
